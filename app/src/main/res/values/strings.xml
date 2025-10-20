@@ -1,0 +1,49 @@
+<resources>
+    <string name="app_name">PDF Viewer</string>
+
+    <!-- Main Activity -->
+    <string name="welcome_title">Welcome to PDF Viewer</string>
+    <string name="welcome_subtitle">Lightweight and efficient PDF reader for Android</string>
+    <string name="open_pdf">Open PDF</string>
+    <string name="recent_files">Recent Files</string>
+    <string name="browse_files">Browse Files</string>
+    <string name="no_recent_files">No recent files</string>
+    <string name="no_recent_files_subtitle">Open a PDF to get started</string>
+
+    <!-- PDF Viewer Activity -->
+    <string name="page_indicator">Page %1$d of %2$d</string>
+    <string name="zoom_in">Zoom In</string>
+    <string name="zoom_out">Zoom Out</string>
+    <string name="share">Share</string>
+    <string name="search">Search</string>
+    <string name="bookmarks">Bookmarks</string>
+    <string name="settings">Settings</string>
+
+    <!-- File Browser -->
+    <string name="select_pdf">Select PDF File</string>
+    <string name="no_files_found">No PDF files found</string>
+    <string name="storage_permission_required">Storage permission is required to access PDF files</string>
+    <string name="grant_permission">Grant Permission</string>
+
+    <!-- Errors -->
+    <string name="error_loading_pdf">Error loading PDF file</string>
+    <string name="error_file_not_found">File not found</string>
+    <string name="error_invalid_pdf">Invalid PDF file</string>
+    <string name="error_permission_denied">Permission denied</string>
+
+    <!-- Actions -->
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="retry">Retry</string>
+    <string name="close">Close</string>
+
+    <!-- Features -->
+    <string name="feature_lightweight">Lightweight</string>
+    <string name="feature_lightweight_desc">Minimal storage space</string>
+    <string name="feature_fast">Fast Loading</string>
+    <string name="feature_fast_desc">Quick PDF rendering</string>
+    <string name="feature_secure">Secure</string>
+    <string name="feature_secure_desc">Your documents are safe</string>
+    <string name="feature_organized">Organized</string>
+    <string name="feature_organized_desc">Easy file management</string>
+</resources>
