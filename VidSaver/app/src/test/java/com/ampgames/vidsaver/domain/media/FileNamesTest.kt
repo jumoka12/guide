@@ -108,6 +108,19 @@ class FileNamesTest {
     }
 
     @Test
+    fun `a missing title falls back to the site and post id before the host`() {
+        assertEquals("tiktok_1789411373000", FileNames.siteIdName("https://www.tiktok.com/@user/video/1789411373000"))
+        assertEquals("facebook_4194402202515", FileNames.siteIdName("https://m.facebook.com/watch/?v=4194402202515"))
+        assertEquals("instagram_C9xYz_ab", FileNames.siteIdName("https://www.instagram.com/reel/C9xYz_ab/"))
+        assertEquals("x_1700000000000000000", FileNames.siteIdName("https://x.com/user/status/1700000000000000000"))
+        assertNull(FileNames.siteIdName("https://example.com/about"))
+        assertEquals(
+            "tiktok_1789411373000.mp4",
+            FileNames.forCandidate("#fyp", "https://www.tiktok.com/@user/video/1789411373000", "mp4"),
+        )
+    }
+
+    @Test
     fun `deduplicate appends a counter before the extension`() {
         val taken = setOf("clip.mp4", "clip (2).mp4")
         assertEquals("clip (3).mp4", FileNames.deduplicate("clip.mp4", taken))

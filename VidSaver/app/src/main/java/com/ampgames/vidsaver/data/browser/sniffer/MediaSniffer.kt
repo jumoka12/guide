@@ -5,6 +5,7 @@ import com.ampgames.vidsaver.core.net.Urls
 import com.ampgames.vidsaver.di.ApplicationScope
 import com.ampgames.vidsaver.di.IoDispatcher
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
+import com.ampgames.vidsaver.domain.media.Activity
 import com.ampgames.vidsaver.domain.media.MediaIdentity
 import com.ampgames.vidsaver.domain.media.MediaTypes
 import com.ampgames.vidsaver.domain.media.SniffSource
@@ -118,20 +119,33 @@ class MediaSniffer @Inject constructor(
             if (UnsupportedDomains.isUnsupported(absolute)) return@forEach
             if (MediaTypes.typeOf(absolute, report.mimeType) == null) return@forEach
 
+            val canonical = MediaIdentity.canonicalUrl(absolute)
+            val headers = buildHeaders(canonical, buildMap { userAgent?.let { put("User-Agent", it) } })
             record(
                 SniffedMedia(
-                    url = absolute,
+                    url = canonical,
                     pageUrl = currentPage,
                     mimeType = report.mimeType,
-                    headers = buildHeaders(absolute, buildMap { userAgent?.let { put("User-Agent", it) } }),
+                    headers = headers,
                     width = report.width,
                     height = report.height,
                     posterUrl = report.poster,
                     title = report.title,
                     source = SniffSource.DOM,
                     detectedAt = System.currentTimeMillis(),
+                    activity = Activity(
+                        isPlaying = report.playing,
+                        isActive = report.active,
+                        visibleFraction = report.visible?.coerceIn(0.0, 1.0) ?: 0.0,
+                    ),
                 ),
             )
+
+            // A <video src> the network layer never saw (set before our client
+            // attached, or served from cache) still needs its size.
+            if (seen.add(MediaIdentity.contentKey(canonical)) && shouldProbe(canonical, looksLikeMedia = true)) {
+                scope.launch { probeContentType(canonical, headers, alreadyRecorded = true) }
+            }
         }
     }
 

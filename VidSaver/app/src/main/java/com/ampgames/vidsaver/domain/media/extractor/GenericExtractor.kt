@@ -80,16 +80,35 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                         resolution = resolution,
                     ),
                     source = media.source,
+                    activityScore = media.activity.score,
+                    detectedAt = media.detectedAt,
                 )
-            }.sortedWith(
-                // What the page itself called a video first, then best quality,
-                // then larger files, then a stable URL order.
-                compareByDescending<MediaCandidate> { it.isPrimary }
-                    .thenByDescending { it.height ?: 0 }
-                    .thenByDescending { it.sizeBytes ?: 0L }
-                    .thenBy { it.url },
-            ).take(MAX_CANDIDATES)
+            }.sortedWith(ranking()).take(MAX_CANDIDATES)
         }
+
+        /**
+         * The order the sheet shows, best guess first:
+         *
+         * 1. what the page is playing now, or played last;
+         * 2. what the page itself named (`<video>`, `og:video`) over what
+         *    merely crossed the wire;
+         * 3. the most recently requested — in a feed, the clip that just
+         *    scrolled into view is the one that just loaded, and the
+         *    one requested a minute ago is three posts up;
+         * 4. best quality, then larger files, then a stable URL order.
+         *
+         * Recency is bucketed to two seconds so the tiers of one video, which
+         * load together, still fall into the quality order.
+         */
+        fun ranking(): Comparator<MediaCandidate> =
+            compareByDescending<MediaCandidate> { it.activityScore }
+                .thenByDescending { it.isPrimary }
+                .thenByDescending { it.detectedAt / RECENCY_BUCKET_MS }
+                .thenByDescending { it.height ?: 0 }
+                .thenByDescending { it.sizeBytes ?: 0L }
+                .thenBy { it.url }
+
+        private const val RECENCY_BUCKET_MS = 2_000L
 
         /**
          * A hard ceiling on what the sheet will offer.

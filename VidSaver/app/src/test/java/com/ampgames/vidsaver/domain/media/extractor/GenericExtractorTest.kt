@@ -1,5 +1,6 @@
 package com.ampgames.vidsaver.domain.media.extractor
 
+import com.ampgames.vidsaver.domain.media.Activity
 import com.ampgames.vidsaver.domain.media.MediaType
 import com.ampgames.vidsaver.domain.media.SniffSource
 import com.ampgames.vidsaver.domain.media.SniffedMedia
@@ -261,6 +262,80 @@ class GenericExtractorTest {
 
         assertEquals("Sunset", result.single().title)
         assertEquals("Sunset.mp4", result.single().suggestedFileName)
+    }
+
+    // --- Regression: the sheet led with a preloaded clip, not the one on screen --
+
+    @Test
+    fun `the video the page is playing comes first whatever its quality`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://c.example.com/next.mp4", pageUrl, height = 1080, source = SniffSource.DOM),
+                SniffedMedia(
+                    "https://c.example.com/current.mp4",
+                    pageUrl,
+                    height = 540,
+                    source = SniffSource.DOM,
+                    activity = Activity(isPlaying = true, isActive = true, visibleFraction = 1.0),
+                ),
+                SniffedMedia("https://c.example.com/ad.mp4", pageUrl, height = 1080, source = SniffSource.DOM),
+            ),
+        )
+
+        assertTrue(result.first().url.endsWith("current.mp4"))
+        assertTrue(result.first().isOnScreen)
+        assertFalse(result[1].isOnScreen)
+    }
+
+    @Test
+    fun `a paused clip that played last still beats one that never played`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://c.example.com/never.mp4", pageUrl, source = SniffSource.DOM, activity = Activity(visibleFraction = 0.9)),
+                SniffedMedia("https://c.example.com/paused.mp4", pageUrl, source = SniffSource.DOM, activity = Activity(isActive = true, visibleFraction = 0.4)),
+            ),
+        )
+        assertTrue(result.first().url.endsWith("paused.mp4"))
+    }
+
+    @Test
+    fun `among files the page never showed playing the newest request leads`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://c.example.com/old.mp4", pageUrl, height = 1080, detectedAt = 10_000L),
+                SniffedMedia("https://c.example.com/new.mp4", pageUrl, height = 480, detectedAt = 60_000L),
+            ),
+        )
+        assertTrue(result.first().url.endsWith("new.mp4"))
+    }
+
+    @Test
+    fun `tiers loaded together still sort by quality`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://c.example.com/480.mp4", pageUrl, height = 480, detectedAt = 60_100L),
+                SniffedMedia("https://c.example.com/1080.mp4", pageUrl, height = 1080, detectedAt = 60_000L),
+            ),
+        )
+        assertEquals(listOf(1080, 480), result.map { it.height })
+    }
+
+    @Test
+    fun `a later sighting updates the playback state of a known file`() {
+        val first = SniffedMedia("u", pageUrl, source = SniffSource.DOM, detectedAt = 1L, activity = Activity(isPlaying = true))
+        val later = SniffedMedia("u", pageUrl, source = SniffSource.DOM, detectedAt = 2L, activity = Activity(isPlaying = false))
+        assertFalse(first.enrichedWith(later).activity.isPlaying)
+        // A network sighting knows nothing about playback and must not erase it.
+        val network = SniffedMedia("u", pageUrl, source = SniffSource.NETWORK, detectedAt = 3L, contentLength = 5L)
+        assertTrue(first.enrichedWith(network).activity.isPlaying)
     }
 
     /** A wall of options is not a chooser. */

@@ -68,9 +68,27 @@ object FileNames {
         return labels.getOrNull(idx)
     }
 
+    /** The post id in a social URL: `/video/123`, `/reel/AbC`, `?v=123`, `/status/123`. */
+    private val POST_ID = Regex(
+        """(?:/(?:video|videos|reel|reels|p|status|watch|shorts)/([A-Za-z0-9_-]{4,}))|(?:[?&]v=([A-Za-z0-9_-]{4,}))""",
+    )
+
     /**
-     * Name for a download, preferring the page title and falling back to the
-     * site host so two downloads from different sites never collide silently.
+     * `tiktok_1789411373000`, `facebook_4194402202515`: the site and the post
+     * id, which is what a person can match back to the page later. Null when
+     * the URL carries no recognisable id.
+     */
+    fun siteIdName(pageUrl: String): String? {
+        val site = siteName(pageUrl) ?: return null
+        val match = POST_ID.find(pageUrl.substringBefore('#')) ?: return null
+        val id = match.groupValues.drop(1).firstOrNull { it.isNotEmpty() } ?: return null
+        return "${site}_$id"
+    }
+
+    /**
+     * Name for a download: the cleaned page title, else the site and post id,
+     * else the site host — so two downloads from different sites never collide
+     * silently.
      */
     fun forCandidate(
         title: String?,
@@ -79,6 +97,7 @@ object FileNames {
         resolution: String? = null,
     ): String {
         val base = cleanTitle(title, pageUrl)
+            ?: siteIdName(pageUrl)
             ?: Urls.host(pageUrl)?.removePrefix("www.")
             ?: "video"
         val withResolution = if (resolution.isNullOrBlank()) base else "$base $resolution"

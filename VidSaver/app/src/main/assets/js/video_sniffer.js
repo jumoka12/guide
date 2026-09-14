@@ -28,6 +28,38 @@
   var lastPayload = '';
   var scanTimer = null;
 
+  // The <video> that most recently started or advanced playback. In a feed
+  // every clip on the page is a <video>, most of them preloaded and silent;
+  // the one the person is actually watching is the one that plays.
+  var lastActive = null;
+
+  function trackActive(event) {
+    var target = event.target;
+    if (target && target.tagName === 'VIDEO') {
+      if (lastActive !== target) {
+        lastActive = target;
+        scheduleScan();
+      }
+    }
+  }
+
+  // How much of the element is inside the viewport, 0..1.
+  function visibleFraction(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      var area = r.width * r.height;
+      if (!area) return 0;
+      var vw = window.innerWidth || document.documentElement.clientWidth;
+      var vh = window.innerHeight || document.documentElement.clientHeight;
+      var w = Math.min(r.right, vw) - Math.max(r.left, 0);
+      var h = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+      if (w <= 0 || h <= 0) return 0;
+      return Math.round((w * h / area) * 100) / 100;
+    } catch (e) {
+      return 0;
+    }
+  }
+
   function isUsableUrl(url) {
     if (!url || typeof url !== 'string') return false;
     // blob:/data: URLs exist only inside the page and cannot be re-fetched.
@@ -54,6 +86,9 @@
       if (extra.height) entry.height = extra.height;
       if (extra.duration) entry.duration = extra.duration;
       if (extra.title) entry.title = extra.title;
+      if (extra.playing) entry.playing = true;
+      if (extra.active) entry.active = true;
+      if (typeof extra.visible === 'number') entry.visible = extra.visible;
     }
     out.push(entry);
   }
@@ -67,7 +102,10 @@
         width: video.videoWidth || null,
         height: video.videoHeight || null,
         duration: isFinite(video.duration) ? video.duration : null,
-        title: video.getAttribute('title') || null
+        title: video.getAttribute('title') || null,
+        playing: !video.paused && !video.ended && video.readyState > 2,
+        active: video === lastActive,
+        visible: visibleFraction(video)
       };
 
       // currentSrc is what the element actually resolved to; src is what the
@@ -83,7 +121,10 @@
           width: shared.width,
           height: shared.height,
           duration: shared.duration,
-          title: shared.title
+          title: shared.title,
+          playing: shared.playing,
+          active: shared.active,
+          visible: shared.visible
         });
       }
     }
@@ -159,9 +200,15 @@
     /* MutationObserver unavailable; the event hooks below still fire */
   }
 
-  ['loadedmetadata', 'loadeddata', 'playing', 'durationchange'].forEach(function (event) {
+  ['loadedmetadata', 'loadeddata', 'playing', 'durationchange', 'pause', 'ended'].forEach(function (event) {
     document.addEventListener(event, scheduleScan, true);
   });
+  // Capture phase: play events do not bubble, but capture still sees them.
+  ['play', 'playing', 'timeupdate'].forEach(function (event) {
+    document.addEventListener(event, trackActive, true);
+  });
+  // Scrolling a feed changes which clip is on screen without touching the DOM.
+  window.addEventListener('scroll', scheduleScan, true);
 
   scan();
 })();

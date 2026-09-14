@@ -111,7 +111,8 @@ class FacebookExtractor @Inject constructor() :
         }
 
         return byQuality.values.sortedWith(
-            compareByDescending<MediaCandidate> { it.isPrimary }
+            compareByDescending<MediaCandidate> { it.activityScore }
+                .thenByDescending { it.isPrimary }
                 .thenByDescending { it.hasAudio == true }
                 .thenByDescending { it.height ?: 0 }
                 .thenByDescending { it.sizeBytes ?: 0L }

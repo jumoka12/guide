@@ -20,6 +20,12 @@ data class DomMediaReport(
     val width: Int? = null,
     val height: Int? = null,
     @SerialName("duration") val durationSeconds: Double? = null,
+    /** The element is playing right now. */
+    val playing: Boolean = false,
+    /** The element most recently started or advanced playback. */
+    val active: Boolean = false,
+    /** Fraction of the element inside the viewport, 0..1. */
+    val visible: Double? = null,
 ) {
     /**
      * Absolute form of [url] against [pageUrl], or null when the URL is not
