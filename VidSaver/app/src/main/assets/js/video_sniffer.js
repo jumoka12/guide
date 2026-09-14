@@ -49,6 +49,24 @@
     return i > 0 ? url.substring(0, i) : '?';
   }
 
+  // Where the element is and how it is styled: enough to tell "zero-sized"
+  // from "off screen" from "opacity 0" when a playing video is not visible.
+  function boxOf(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      var cs = window.getComputedStyle(el);
+      var vp = window.visualViewport;
+      return 'rect=' + Math.round(r.width) + 'x' + Math.round(r.height) +
+        '@' + Math.round(r.left) + ',' + Math.round(r.top) +
+        ' vp=' + window.innerWidth + 'x' + window.innerHeight +
+        (vp ? ' scale=' + (Math.round(vp.scale * 100) / 100) : '') +
+        ' disp=' + cs.display + ' op=' + cs.opacity + ' visb=' + cs.visibility +
+        ' pos=' + cs.position + ' z=' + cs.zIndex;
+    } catch (e) {
+      return 'box=?';
+    }
+  }
+
   // How much of the element is inside the viewport, 0..1.
   function visibleFraction(el) {
     try {
@@ -113,7 +131,7 @@
           ' rs=' + video.readyState + ' ns=' + video.networkState +
           ' err=' + (video.error ? video.error.code : 0) +
           ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
-          ' vis=' + visibleFraction(video));
+          ' vis=' + visibleFraction(video) + ' ' + boxOf(video));
       }
       var shared = {
         poster: video.getAttribute('poster') || null,
