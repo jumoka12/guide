@@ -3,6 +3,9 @@ package com.ampgames.vidsaver
 import android.app.Application
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import coil.ImageLoader
+import coil.ImageLoaderFactory
+import coil.decode.VideoFrameDecoder
 import com.ampgames.vidsaver.core.logging.ReleaseTree
 import com.ampgames.vidsaver.data.download.DownloadNotifications
 import dagger.hilt.android.HiltAndroidApp
@@ -18,7 +21,7 @@ import timber.log.Timber
  * prevent the app from opening.
  */
 @HiltAndroidApp
-class VidSaverApplication : Application(), Configuration.Provider {
+class VidSaverApplication : Application(), Configuration.Provider, ImageLoaderFactory {
 
     /**
      * Provider, not a direct injection: WorkManager is only needed when a
@@ -36,6 +39,15 @@ class VidSaverApplication : Application(), Configuration.Provider {
             .setWorkerFactory(workerFactory.get())
             .setMinimumLoggingLevel(if (BuildConfig.DEBUG) android.util.Log.DEBUG else android.util.Log.WARN)
             .build()
+
+    /**
+     * Coil does not register the video decoder by default, and gallery
+     * thumbnails are frames pulled out of the saved files.
+     */
+    override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)
+        .components { add(VideoFrameDecoder.Factory()) }
+        .crossfade(true)
+        .build()
 
     override fun onCreate() {
         super.onCreate()

@@ -4,8 +4,8 @@ An Android in-app browser that detects videos the page already delivers for
 playback, downloads them to the device, and plays them back in a built-in
 gallery.
 
-> **Phase status:** Phases 1–3 complete (skeleton, browser, video detection,
-> download engine). Phases 4–7 are not implemented yet. See
+> **Phase status:** Phases 1–4 complete (skeleton, browser, video detection,
+> download engine, gallery and player). Phases 5–7 are not implemented yet. See
 > [Roadmap](#roadmap).
 
 ## Stack
@@ -19,7 +19,7 @@ gallery.
 | Async | Coroutines + Flow |
 | Persistence | Room, DataStore |
 | Background work | Foreground service for transfers; WorkManager for retry scheduling only |
-| Media | Media3 Transformer (remux); ExoPlayer playback in Phase 4 |
+| Media | Media3 — Transformer for remuxing, ExoPlayer + MediaSession for playback |
 | Networking | OkHttp |
 | Images | Coil |
 | Logging | Timber |
@@ -204,6 +204,44 @@ are requested **in context**, at the moment the user taps Save. Neither is a
 hard requirement: a denied notification permission only costs the progress
 notification, and the download starts either way.
 
+### Gallery and player
+
+**Gallery** reads MediaStore scoped to `Movies/VidSaver` — it shows what
+VidSaver saved, never the user's whole video library. A `ContentObserver` drives
+re-reads, so the grid updates the moment a download finishes or a file is
+removed from another app, with no polling. Thumbnails are frames decoded from
+the files themselves (Coil's `VideoFrameDecoder`, registered explicitly in
+`VidSaverApplication`), taken a second in because frame zero is so often black.
+
+Long-press starts multi-select; share, delete and rename act on the selection.
+Rename preserves the extension and reuses `FileNames.sanitize`, so a pasted
+title cannot introduce path separators — and the dialog says up front when the
+name will be adjusted rather than silently saving something different.
+Selections are pruned against the live library, so deleting from another app
+cannot leave the counter claiming more than really exists.
+
+**Player** keeps its ExoPlayer in `PlaybackService`, a `MediaSessionService`,
+and the screen attaches through a `MediaController`. That one decision is what
+makes background audio, the system media notification, lock-screen controls and
+Picture-in-Picture work: the UI comes and goes, playback does not.
+
+| Gesture | Effect |
+| --- | --- |
+| Tap | Show/hide controls (auto-hide after 3s while playing) |
+| Double-tap left / right | Jump 10s back / forward |
+| Drag horizontally | Scrub; committed on finger-up, not on every pointer event |
+| Drag vertically, left | Screen brightness (this window only — the system setting is never touched) |
+| Drag vertically, right | Media volume |
+
+The arithmetic lives in `PlayerGestures`, free of Compose and Android, so the
+zone boundaries, clamping and seek mapping are unit-tested directly. The centre
+of the screen is a dead zone, so a mis-aimed vertical drag does nothing rather
+than something surprising.
+
+`Playlist` handles the awkward cases in one tested place: the library changing
+mid-playback keeps the same video playing, and a video deleted underneath falls
+back to whatever now occupies that position instead of restarting the queue.
+
 ### Ad blocking
 
 `assets/hosts_blocklist.txt` is a **placeholder**; replace it with a real list.
@@ -263,7 +301,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | 1 | Skeleton: Gradle/version catalog, Hilt, Compose, 4-tab navigation, `AppConfig`, Timber, crash-safe Application | Done |
 | 2 | Browser: WebView, tabs, bookmarks, history, ad-blocker, video sniffing, extractor registry, HLS strategy | Done |
 | 3 | Download engine: Room-backed repository, foreground service, resumable/concurrent downloads, MediaStore | Done |
-| 4 | Gallery and Media3 player | Not started |
+| 4 | Gallery and Media3 player | Done |
 | 5 | Subscriptions via RevenueCat and the paywall | Not started |
 | 6 | Ads: AppLovin MAX + GAM post-bidding, UMP consent, `AdPolicy` | Not started |
 | 7 | Analytics, Crashlytics, rate prompt, onboarding, localization, Play readiness | Not started |

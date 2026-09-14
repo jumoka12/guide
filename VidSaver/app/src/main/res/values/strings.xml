@@ -92,6 +92,39 @@
     <string name="notif_action_resume">Resume</string>
     <string name="notif_action_cancel">Cancel</string>
 
+    <!-- Gallery -->
+    <string name="gallery_sort">Sort</string>
+    <string name="gallery_sort_newest">Newest first</string>
+    <string name="gallery_sort_oldest">Oldest first</string>
+    <string name="gallery_sort_name">Name</string>
+    <string name="gallery_sort_largest">Largest first</string>
+    <string name="gallery_selected">%1$d selected</string>
+    <string name="gallery_select_all">Select all</string>
+    <string name="gallery_select_none">Select none</string>
+    <string name="gallery_clear_selection">Clear selection</string>
+    <string name="gallery_share">Share</string>
+    <string name="gallery_delete">Delete</string>
+    <string name="gallery_rename">Rename</string>
+    <string name="gallery_rename_label">Name</string>
+    <string name="gallery_rename_confirm">Rename</string>
+    <string name="gallery_rename_cancel">Cancel</string>
+    <string name="gallery_rename_invalid">Enter a name</string>
+    <string name="gallery_rename_adjusted">Will be saved as \u201c%1$s\u201d</string>
+    <string name="gallery_renamed">Renamed</string>
+    <string name="gallery_rename_failed">Couldn\'t rename that video</string>
+    <string name="gallery_deleted">%1$s deleted</string>
+    <string name="gallery_deleted_partial">%1$s deleted, %2$s couldn\'t be removed</string>
+    <string name="gallery_delete_failed">Couldn\'t delete those videos</string>
+
+    <!-- Player -->
+    <string name="player_back">Back</string>
+    <string name="player_play">Play</string>
+    <string name="player_pause">Pause</string>
+    <string name="player_next">Next video</string>
+    <string name="player_previous">Previous video</string>
+    <string name="player_pip">Picture\u2011in\u2011picture</string>
+    <string name="player_background_audio">Keep audio playing in the background</string>
+
     <!-- Placeholders for features landing in later phases -->
     <string name="placeholder_downloads">Your active and finished downloads will appear here.</string>
     <string name="placeholder_gallery">Videos you save will appear here.</string>

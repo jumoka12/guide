@@ -188,11 +188,17 @@ dependencies {
 
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
+    // Decodes a frame from a video file for gallery thumbnails.
+    implementation(libs.coil.video)
 
-    // Phase 2 uses Transformer to remux downloaded HLS segments into MP4.
-    // Playback (Phase 4) adds the ExoPlayer/UI artifacts.
+    // Transformer remuxes downloaded HLS segments (Phase 2); the rest is
+    // playback (Phase 4).
     implementation(libs.media3.transformer)
     implementation(libs.media3.common)
+    implementation(libs.media3.exoplayer)
+    implementation(libs.media3.exoplayer.hls)
+    implementation(libs.media3.ui)
+    implementation(libs.media3.session)
 
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.serialization.json)

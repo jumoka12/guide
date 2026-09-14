@@ -20,7 +20,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | Web browsing history | **No** | No | Browsing history and bookmarks stay on the device and are never transmitted. | — | 2 |
 | Files and docs | **No** | No | Downloaded videos stay on the device in Movies/VidSaver and are never uploaded. | — | 3 |
 | Personal info (name, email, address) | **No** | No | The app has no account system. | — | — |
-| Photos and videos | **No** | No | Not uploaded; saved via MediaStore to the user's device only. | — | 3 |
+| Photos and videos | **No** | No | Not uploaded; saved via MediaStore to the user's device only. The gallery reads only the app's own Movies/VidSaver folder, never the wider library. | — | 3, 4 |
 
 ## Security practices
 
