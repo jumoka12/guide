@@ -18,7 +18,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | Purchase history | Yes | Yes — RevenueCat | Subscription entitlement | No | 5 |
 | Approximate location (IP-derived, by ad networks) | Yes | Yes — ad networks | Advertising | Yes, via UMP consent | 6 |
 | Web browsing history | **No** | No | Browsing history and bookmarks stay on the device and are never transmitted. | — | 2 |
-| Files and docs | **No** | No | Downloaded videos stay on the device. | — | 3 |
+| Files and docs | **No** | No | Downloaded videos stay on the device in Movies/VidSaver and are never uploaded. | — | 3 |
 | Personal info (name, email, address) | **No** | No | The app has no account system. | — | — |
 | Photos and videos | **No** | No | Not uploaded; saved via MediaStore to the user's device only. | — | 3 |
 
@@ -32,6 +32,12 @@ Privacy policy: <https://ampgames.com/privacy>
   from cloud backup and device-to-device transfer (see
   `res/xml/backup_rules.xml` and `res/xml/data_extraction_rules.xml`).
 - No data is collected before the UMP consent flow resolves.
+- Downloaded videos and the download queue are local. The queue records the
+  source URL and the request headers needed to resume a transfer; none of it
+  leaves the device, and it is excluded from cloud backup and device transfer.
+- `POST_NOTIFICATIONS` and (API 28 and below) `WRITE_EXTERNAL_STORAGE` are
+  requested only when the user saves a video, and neither is required for the
+  app to function.
 
 ## Third-party SDKs that receive data
 

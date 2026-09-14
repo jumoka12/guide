@@ -26,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.ampgames.vidsaver.R
+import com.ampgames.vidsaver.core.format.ByteFormat
 import com.ampgames.vidsaver.domain.media.MediaCandidate
 import com.ampgames.vidsaver.domain.media.MediaType
 import java.util.Locale
@@ -115,7 +116,7 @@ private fun describe(candidate: MediaCandidate): String {
     val parts = buildList {
         add(if (candidate.type == MediaType.HLS) "HLS" else formatContainer(candidate))
         candidate.resolutionLabel?.let { add(it) }
-        candidate.sizeBytes?.let { add(formatBytes(it)) }
+        candidate.sizeBytes?.let { add(ByteFormat.size(it)) }
     }
     return parts.joinToString(" · ")
 }
@@ -123,14 +124,3 @@ private fun describe(candidate: MediaCandidate): String {
 private fun formatContainer(candidate: MediaCandidate): String =
     candidate.suggestedFileName.substringAfterLast('.', "video").uppercase(Locale.US)
 
-private fun formatBytes(bytes: Long): String {
-    if (bytes < 1024) return "$bytes B"
-    val units = listOf("KB", "MB", "GB")
-    var value = bytes.toDouble() / 1024
-    var unitIndex = 0
-    while (value >= 1024 && unitIndex < units.lastIndex) {
-        value /= 1024
-        unitIndex++
-    }
-    return String.format(Locale.US, "%.1f %s", value, units[unitIndex])
-}

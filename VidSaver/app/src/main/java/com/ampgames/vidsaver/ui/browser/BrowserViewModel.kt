@@ -11,6 +11,7 @@ import com.ampgames.vidsaver.data.browser.prefs.BrowserPreferences
 import com.ampgames.vidsaver.data.browser.sniffer.DomMediaPayload
 import com.ampgames.vidsaver.data.browser.sniffer.MediaSniffer
 import com.ampgames.vidsaver.data.config.AppConfig
+import com.ampgames.vidsaver.data.download.DownloadStarter
 import com.ampgames.vidsaver.domain.browser.SearchEngine
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
 import com.ampgames.vidsaver.domain.media.MediaCandidate
@@ -48,6 +49,7 @@ class BrowserViewModel @Inject constructor(
     private val mediaSniffer: MediaSniffer,
     private val extractorRegistry: ExtractorRegistry,
     private val adBlocker: AdBlocker,
+    private val downloadStarter: DownloadStarter,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -253,13 +255,26 @@ class BrowserViewModel @Inject constructor(
         _uiState.update { it.copy(showCandidatesSheet = false) }
     }
 
-    /**
-     * Phase 2 surfaces the candidate and hands off; the download engine that
-     * actually enqueues it arrives in Phase 3.
-     */
+    /** Queues the candidate and wakes the download service. */
     fun onDownloadCandidate(candidate: MediaCandidate) {
         _uiState.update { it.copy(showCandidatesSheet = false) }
-        emitMessage(R.string.msg_download_coming_soon, candidate.suggestedFileName)
+        viewModelScope.launch {
+            runCatching { downloadStarter.enqueue(candidate) }
+                .onSuccess { result ->
+                    emitMessage(
+                        if (result.alreadyExisted) {
+                            R.string.msg_download_already_queued
+                        } else {
+                            R.string.msg_download_started
+                        },
+                        candidate.suggestedFileName,
+                    )
+                }
+                .onFailure { error ->
+                    Timber.e(error, "Could not queue %s", candidate.url)
+                    emitMessage(R.string.msg_download_queue_failed)
+                }
+        }
     }
 
     fun onToggleBookmark() {

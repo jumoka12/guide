@@ -6,6 +6,7 @@ import com.ampgames.vidsaver.data.browser.db.AllowlistDao
 import com.ampgames.vidsaver.data.browser.db.BookmarkDao
 import com.ampgames.vidsaver.data.browser.db.HistoryDao
 import com.ampgames.vidsaver.data.browser.db.VidSaverDatabase
+import com.ampgames.vidsaver.data.download.db.DownloadDao
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -21,6 +22,7 @@ object DatabaseModule {
     @Singleton
     fun provideDatabase(@ApplicationContext context: Context): VidSaverDatabase =
         Room.databaseBuilder(context, VidSaverDatabase::class.java, VidSaverDatabase.NAME)
+            .addMigrations(*VidSaverDatabase.MIGRATIONS)
             .build()
 
     @Provides
@@ -31,4 +33,7 @@ object DatabaseModule {
 
     @Provides
     fun provideAllowlistDao(database: VidSaverDatabase): AllowlistDao = database.allowlistDao()
+
+    @Provides
+    fun provideDownloadDao(database: VidSaverDatabase): DownloadDao = database.downloadDao()
 }

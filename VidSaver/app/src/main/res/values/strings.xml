@@ -46,6 +46,52 @@
     <string name="candidates_subtitle">Only media this page already loaded for playback is listed.</string>
     <string name="candidates_download">Save</string>
 
+    <!-- Downloads -->
+    <string name="downloads_section_active">In progress</string>
+    <string name="downloads_section_finished">Finished</string>
+    <string name="downloads_pause">Pause</string>
+    <string name="downloads_resume">Resume</string>
+    <string name="downloads_cancel">Cancel</string>
+    <string name="downloads_retry">Retry</string>
+    <string name="downloads_delete">Delete</string>
+    <string name="downloads_clear_finished">Clear finished</string>
+    <string name="downloads_wifi_only">Wi\u2011Fi only</string>
+    <string name="downloads_remaining">%1$s left</string>
+    <string name="downloads_status_queued">Waiting…</string>
+    <string name="downloads_status_paused">Paused</string>
+    <string name="downloads_status_retrying">Retrying soon…</string>
+    <string name="downloads_status_cancelled">Cancelled</string>
+    <string name="downloads_removed">Removed from the list</string>
+    <string name="downloads_deleted_with_file">Video deleted</string>
+    <string name="downloads_retrying">Retrying…</string>
+    <string name="downloads_cleared">Finished downloads cleared</string>
+    <string name="downloads_wifi_only_on">Downloads will wait for Wi\u2011Fi</string>
+    <string name="downloads_wifi_only_off">Downloads can use mobile data</string>
+
+    <!-- Download failures, written for a person rather than a log -->
+    <string name="download_error_network">No connection. It will retry automatically.</string>
+    <string name="download_error_http">The server refused the request.</string>
+    <string name="download_error_encrypted">This video is protected and can\'t be saved.</string>
+    <string name="download_error_live">Live streams can\'t be saved.</string>
+    <string name="download_error_storage">Couldn\'t save to your device.</string>
+    <string name="download_error_unsupported">This video format isn\'t supported.</string>
+    <string name="download_error_unknown">Something went wrong.</string>
+
+    <!-- Download notifications -->
+    <string name="notif_channel_progress">Download progress</string>
+    <string name="notif_channel_progress_desc">Shows an ongoing notification while videos are downloading.</string>
+    <string name="notif_channel_complete">Finished downloads</string>
+    <string name="notif_channel_complete_desc">Tells you when a download finishes or fails.</string>
+    <string name="notif_downloads_working">Downloading…</string>
+    <string name="notif_downloads_count">Downloading %1$d videos</string>
+    <string name="notif_downloads_paused">Paused</string>
+    <string name="notif_downloads_speed">%1$s</string>
+    <string name="notif_download_complete">Download complete</string>
+    <string name="notif_download_failed">Download failed</string>
+    <string name="notif_action_pause">Pause</string>
+    <string name="notif_action_resume">Resume</string>
+    <string name="notif_action_cancel">Cancel</string>
+
     <!-- Placeholders for features landing in later phases -->
     <string name="placeholder_downloads">Your active and finished downloads will appear here.</string>
     <string name="placeholder_gallery">Videos you save will appear here.</string>
@@ -57,11 +103,18 @@
     <string name="msg_history_cleared">History cleared</string>
     <string name="msg_ads_allowed_on">Ads allowed on %1$s</string>
     <string name="msg_ads_blocked_on">Ads blocked on %1$s</string>
-    <string name="msg_download_coming_soon">Saving arrives in the next update: %1$s</string>
+    <string name="msg_download_started">Saving %1$s</string>
+    <string name="msg_download_already_queued">%1$s is already in your downloads</string>
+    <string name="msg_download_queue_failed">Couldn\'t start that download</string>
 
     <!-- Settings -->
     <string name="settings_privacy_policy">Privacy policy</string>
     <string name="settings_terms">Terms of use</string>
     <string name="settings_support">Contact support</string>
     <string name="settings_version">Version %1$s</string>
+
+    <plurals name="notif_paused_count">
+        <item quantity="one">%1$d download paused</item>
+        <item quantity="other">%1$d downloads paused</item>
+    </plurals>
 </resources>

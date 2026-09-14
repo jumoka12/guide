@@ -4,8 +4,8 @@ An Android in-app browser that detects videos the page already delivers for
 playback, downloads them to the device, and plays them back in a built-in
 gallery.
 
-> **Phase status:** Phases 1–2 complete (skeleton, browser, video detection,
-> download strategies). Phases 3–7 are not implemented yet. See
+> **Phase status:** Phases 1–3 complete (skeleton, browser, video detection,
+> download engine). Phases 4–7 are not implemented yet. See
 > [Roadmap](#roadmap).
 
 ## Stack
@@ -18,7 +18,7 @@ gallery.
 | DI | Hilt |
 | Async | Coroutines + Flow |
 | Persistence | Room, DataStore |
-| Background work | WorkManager + a foreground service (Phase 3) |
+| Background work | Foreground service for transfers; WorkManager for retry scheduling only |
 | Media | Media3 Transformer (remux); ExoPlayer playback in Phase 4 |
 | Networking | OkHttp |
 | Images | Coil |
@@ -151,6 +151,59 @@ Two cases are refused outright rather than worked around:
 | `EXT-X-KEY` with a real method | `DownloadError.Encrypted` — the key is never fetched, the stream is never decrypted |
 | No `EXT-X-ENDLIST` (live) | `DownloadError.LiveStream` |
 
+### The download engine
+
+```
+BrowserViewModel ──► DownloadStarter ──► DownloadRepository (Room: downloads)
+                            │                      ▲
+                            ▼                      │ progress / status
+                     DownloadService  ──────► DownloadEngine ──► DownloadStrategy
+                   (foreground, dataSync)           │
+                                                    ▼
+                                            MediaStorePublisher
+                                          (Movies/VidSaver/)
+```
+
+- **Concurrency** is capped at 3 by a semaphore in `DownloadEngine`; the rest
+  wait as `QUEUED` and the queue is pumped whenever a slot frees up.
+- **Every transfer writes to an app-private `<id>.part` file** and is only moved
+  into the user's library once complete, so a killed process can never leave a
+  truncated video in the gallery. Publishing runs under `NonCancellable`.
+- **Resuming** is the strategy's job (HTTP `Range` for progressive downloads,
+  skipping fetched segments for HLS), so a paused download continues rather than
+  restarting.
+- **Retries** use WorkManager and nothing else: `DownloadRetryWorker` only flips
+  rows back to `QUEUED` and restarts the service. WorkManager supplies what a
+  service cannot — exponential backoff, a network constraint, and survival
+  across reboots — while the visible work stays in the foreground service where
+  the user can control it. Budget is 3 attempts, and only network/HTTP failures
+  are retried: a protected or live stream will never succeed on a retry.
+- **Process death** is handled explicitly: rows left `RUNNING` or `QUEUED` are
+  reset to `PAUSED` at startup rather than appearing to download forever.
+
+#### Storage
+
+| API level | Path | Permission |
+| --- | --- | --- |
+| 29+ | MediaStore with `IS_PENDING`, `RELATIVE_PATH=Movies/VidSaver` | none |
+| 24–28 | `Movies/VidSaver/` then registered with MediaStore | `WRITE_EXTERNAL_STORAGE`, capped at `maxSdkVersion="28"` |
+
+A partially written MediaStore entry is deleted on failure, so a cancelled
+publish never leaves an invisible pending row behind.
+
+#### Notifications
+
+One ongoing notification summarises the whole queue rather than one per
+download, with Pause and Cancel actions. When everything is paused the
+foreground service **stops** and hands off to a plain, dismissible notification
+that still offers Resume — a foreground service must not stay alive for work
+that is not running.
+
+`POST_NOTIFICATIONS` (Android 13+) and, below API 29, `WRITE_EXTERNAL_STORAGE`
+are requested **in context**, at the moment the user taps Save. Neither is a
+hard requirement: a denied notification permission only costs the progress
+notification, and the download starts either way.
+
 ### Ad blocking
 
 `assets/hosts_blocklist.txt` is a **placeholder**; replace it with a real list.
@@ -191,8 +244,9 @@ These constraints are requirements, not preferences:
 - [x] `usesCleartextTraffic="false"`; WebView file/content access off, Safe Browsing on, third-party cookies off by default
 - [x] HLS encryption and live streams refused rather than circumvented
 - [ ] UMP consent gate before any ad SDK init *(Phase 6)*
-- [ ] Notification runtime permission requested in context *(Phase 3)*
-- [ ] Foreground service type `dataSync` with a user-visible download notification *(Phase 3)*
+- [x] Notification runtime permission requested in context, at the first save
+- [x] Foreground service type `dataSync` with a user-visible download notification
+- [x] `WRITE_EXTERNAL_STORAGE` declared only up to API 28; scoped storage above
 - [ ] Paywall shows price, trial length, cancel terms, and a free-tier exit *(Phase 5)*
 - [ ] Data safety form matches [`data-safety.md`](data-safety.md) *(Phase 7)*
 - [ ] Release build signed from `keystore.properties`, R8 rules verified per SDK
@@ -208,7 +262,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | --- | --- | --- |
 | 1 | Skeleton: Gradle/version catalog, Hilt, Compose, 4-tab navigation, `AppConfig`, Timber, crash-safe Application | Done |
 | 2 | Browser: WebView, tabs, bookmarks, history, ad-blocker, video sniffing, extractor registry, HLS strategy | Done |
-| 3 | Download engine: Room-backed repository, foreground service, resumable/concurrent downloads, MediaStore | Not started |
+| 3 | Download engine: Room-backed repository, foreground service, resumable/concurrent downloads, MediaStore | Done |
 | 4 | Gallery and Media3 player | Not started |
 | 5 | Subscriptions via RevenueCat and the paywall | Not started |
 | 6 | Ads: AppLovin MAX + GAM post-bidding, UMP consent, `AdPolicy` | Not started |
@@ -232,7 +286,7 @@ app/src/main/
 │   ├── data/
 │   │   ├── browser/                  Room DAOs, DataStore prefs, ad blocker, sniffer
 │   │   ├── config/                   AppConfig model + loader
-│   │   └── download/                 DownloadStrategy implementations
+│   │   └── download/                 engine, service, repository, strategies
 │   ├── di/                           Hilt modules
 │   └── ui/                           theme, navigation, one package per tab
 └── res/

@@ -31,6 +31,7 @@ import com.ampgames.vidsaver.ui.browser.components.BrowserTopBar
 import com.ampgames.vidsaver.ui.browser.components.CandidatesSheet
 import com.ampgames.vidsaver.ui.browser.components.TabsSheet
 import com.ampgames.vidsaver.ui.browser.web.BrowserWebView
+import com.ampgames.vidsaver.ui.permissions.rememberDownloadPermissions
 
 const val BROWSER_SCREEN_TEST_TAG = "browser_screen"
 const val DOWNLOAD_FAB_TEST_TAG = "download_fab"
@@ -47,6 +48,8 @@ fun BrowserScreen(
 
     // Built once and kept: recreating the client would detach it from the WebView.
     val webViewClient = remember(viewModel) { viewModel.createWebViewClient() }
+    // Asked for at the moment the user saves a video, not on a cold start.
+    val downloadPermissions = rememberDownloadPermissions()
     val snifferBridge = remember(viewModel) { viewModel.createSnifferBridge() }
 
     val context = LocalContext.current
@@ -132,7 +135,12 @@ fun BrowserScreen(
     if (state.showCandidatesSheet) {
         CandidatesSheet(
             candidates = state.candidates,
-            onDownload = viewModel::onDownloadCandidate,
+            onDownload = { candidate ->
+                // Fire-and-forget: a denied notification permission only costs
+                // the progress notification, so the download starts either way.
+                downloadPermissions.request()
+                viewModel.onDownloadCandidate(candidate)
+            },
             onDismiss = viewModel::onCandidatesSheetDismissed,
         )
     }

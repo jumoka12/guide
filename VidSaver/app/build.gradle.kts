@@ -172,7 +172,11 @@ dependencies {
 
     implementation(libs.hilt.android)
     implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.work)
     ksp(libs.hilt.compiler)
+    ksp(libs.hilt.work.compiler)
+
+    implementation(libs.androidx.work.runtime.ktx)
 
     implementation(libs.androidx.webkit)
 
