@@ -163,6 +163,59 @@
     <string name="settings_terms">Terms of use</string>
     <string name="settings_support">Contact support</string>
     <string name="settings_version">Version %1$s</string>
+    <string name="settings_premium_title">VidSaver Premium</string>
+    <string name="settings_premium_active">Active — thank you</string>
+    <string name="settings_premium_active_until">Active until %1$s</string>
+    <string name="settings_premium_lifetime">Lifetime — thank you</string>
+    <string name="settings_premium_free">No ads, unlimited downloads, HD priority</string>
+    <string name="settings_premium_unavailable">Not available in this build</string>
+    <string name="settings_manage_subscription">Manage subscription</string>
+    <string name="settings_manage_subscription_hint">Opens Google Play</string>
+    <string name="settings_restore_purchases">Restore purchases</string>
+    <string name="msg_restore_done">Purchases restored</string>
+    <string name="msg_restore_nothing">No previous purchase found for this account</string>
+    <string name="msg_restore_failed">Couldn\'t reach the store. Try again later.</string>
+
+    <!-- Paywall. Prices, periods and trial lengths are never in strings: they come from the store. -->
+    <string name="paywall_title">VidSaver Premium</string>
+    <string name="paywall_subtitle">Everything the free version does, without the waiting.</string>
+    <string name="paywall_close">Close</string>
+    <string name="paywall_benefit_no_ads">No ads, anywhere in the app</string>
+    <string name="paywall_benefit_concurrent">Download several videos at once</string>
+    <string name="paywall_benefit_hd">HD quality picked first</string>
+    <string name="paywall_benefit_background">Downloads keep going in the background</string>
+    <string name="paywall_plan_monthly">Monthly</string>
+    <string name="paywall_plan_yearly">Yearly</string>
+    <string name="paywall_plan_lifetime">Lifetime</string>
+    <string name="paywall_plan_other">Plan</string>
+    <string name="paywall_save_percent">Save %1$d%%</string>
+    <string name="paywall_pay_once">Pay once, keep forever</string>
+    <string name="paywall_billed_per_period">Billed %1$s</string>
+    <string name="paywall_period_week">weekly</string>
+    <string name="paywall_period_month">monthly</string>
+    <string name="paywall_period_year">yearly</string>
+    <string name="paywall_terms_trial">%1$s free, then %2$s %3$s. Cancel any time in Google Play before the trial ends and you won\'t be charged.</string>
+    <string name="paywall_terms_subscription">%1$s %2$s, renews automatically. Cancel any time in Google Play.</string>
+    <string name="paywall_terms_lifetime">%1$s once. No subscription, no renewal.</string>
+    <string name="paywall_cta_trial">Start free trial</string>
+    <string name="paywall_cta_subscribe">Subscribe</string>
+    <string name="paywall_cta_lifetime">Buy lifetime</string>
+    <string name="paywall_cta_continue">Continue</string>
+    <string name="paywall_restore">Restore purchases</string>
+    <string name="paywall_continue_free">Continue with free version</string>
+    <string name="paywall_nothing_to_restore">No previous purchase found for this Google account.</string>
+    <string name="paywall_load_failed">Plans couldn\'t be loaded right now.</string>
+    <string name="paywall_retry">Try again</string>
+    <string name="paywall_legal">Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel in Google Play at any time.</string>
+
+    <plurals name="paywall_trial_days">
+        <item quantity="one">%1$d-day free trial</item>
+        <item quantity="other">%1$d-day free trial</item>
+    </plurals>
+    <plurals name="paywall_trial_days_inline">
+        <item quantity="one">%1$d day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
 
     <plurals name="notif_paused_count">
         <item quantity="one">%1$d download paused</item>

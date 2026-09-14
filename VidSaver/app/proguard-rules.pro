@@ -63,5 +63,10 @@
 # --- Coil --------------------------------------------------------------------
 -dontwarn coil.**
 
-# RevenueCat (Phase 5) and the AppLovin MAX adapters (Phase 6) add their rules
-# here as they are integrated.
+# --- RevenueCat (Phase 5) ----------------------------------------------------
+# The purchases AAR ships consumer rules (Parcelables, enums, Billing). Nothing
+# extra is needed; kept explicit so a future minify failure is easy to place.
+-keep class com.revenuecat.purchases.** { *; }
+-dontwarn com.revenuecat.purchases.**
+
+# The AppLovin MAX adapters (Phase 6) add their rules here as they are integrated.

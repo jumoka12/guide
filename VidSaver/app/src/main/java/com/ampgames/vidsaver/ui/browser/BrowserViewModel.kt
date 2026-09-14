@@ -10,7 +10,9 @@ import com.ampgames.vidsaver.data.browser.adblock.AdBlocker
 import com.ampgames.vidsaver.data.browser.prefs.BrowserPreferences
 import com.ampgames.vidsaver.data.browser.sniffer.DomMediaPayload
 import com.ampgames.vidsaver.data.browser.sniffer.MediaSniffer
+import com.ampgames.vidsaver.data.billing.PaywallCoordinator
 import com.ampgames.vidsaver.data.config.AppConfig
+import com.ampgames.vidsaver.domain.premium.PaywallSource
 import com.ampgames.vidsaver.data.download.DownloadStarter
 import com.ampgames.vidsaver.domain.browser.SearchEngine
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
@@ -50,6 +52,7 @@ class BrowserViewModel @Inject constructor(
     private val extractorRegistry: ExtractorRegistry,
     private val adBlocker: AdBlocker,
     private val downloadStarter: DownloadStarter,
+    private val paywallCoordinator: PaywallCoordinator,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
@@ -282,8 +285,8 @@ class BrowserViewModel @Inject constructor(
         _uiState.update { it.copy(showCandidatesSheet = true) }
     }
 
-    /** The crown on the home page. Phase 5 swaps this for the paywall. */
-    fun onPremiumClicked() = emitMessage(R.string.msg_premium_soon)
+    /** The crown on the home page. */
+    fun onPremiumClicked() = paywallCoordinator.request(PaywallSource.HOME_CROWN)
 
     fun onCandidatesSheetDismissed() {
         _uiState.update { it.copy(showCandidatesSheet = false) }
@@ -303,6 +306,9 @@ class BrowserViewModel @Inject constructor(
                         },
                         candidate.suggestedFileName,
                     )
+                    // A free install queues behind the running one; this is
+                    // the moment premium's concurrency is worth explaining.
+                    if (!result.alreadyExisted) paywallCoordinator.onConcurrentDownload(result.othersRunning)
                 }
                 .onFailure { error ->
                     Timber.e(error, "Could not queue %s", candidate.url)

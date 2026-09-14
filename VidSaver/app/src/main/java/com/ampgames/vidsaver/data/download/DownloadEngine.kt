@@ -2,6 +2,8 @@ package com.ampgames.vidsaver.data.download
 
 import android.content.Context
 import com.ampgames.vidsaver.core.net.NetworkMonitor
+import com.ampgames.vidsaver.data.billing.PremiumRepository
+import com.ampgames.vidsaver.domain.premium.PaywallGate
 import com.ampgames.vidsaver.di.ApplicationScope
 import com.ampgames.vidsaver.di.IoDispatcher
 import com.ampgames.vidsaver.domain.download.DownloadFailure
@@ -54,11 +56,16 @@ class DownloadEngine @Inject constructor(
     private val mediaStorePublisher: MediaStorePublisher,
     private val preferences: DownloadPreferences,
     private val networkMonitor: NetworkMonitor,
+    private val premium: PremiumRepository,
     @ApplicationScope private val scope: CoroutineScope,
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
 ) {
 
     private val semaphore = Semaphore(MAX_CONCURRENT)
+
+    /** Free installs transfer one at a time; premium up to [MAX_CONCURRENT]. */
+    private fun concurrencyLimit(): Int =
+        PaywallGate.concurrentDownloadsFor(premium.state.value).coerceAtMost(MAX_CONCURRENT)
     private val jobs = ConcurrentHashMap<Long, Job>()
 
     private val _events = MutableSharedFlow<DownloadEvent>(extraBufferCapacity = 16)
@@ -78,7 +85,8 @@ class DownloadEngine @Inject constructor(
                 Timber.d("Holding the queue: network does not meet the current preference")
                 return@launch
             }
-            repository.nextQueued(MAX_CONCURRENT).forEach { entity -> launchJob(entity.id) }
+            val slots = (concurrencyLimit() - jobs.size).coerceAtLeast(0)
+            repository.nextQueued(slots).forEach { entity -> launchJob(entity.id) }
         }
     }
 
@@ -274,7 +282,7 @@ class DownloadEngine @Inject constructor(
     private object CancelCancellation : CancellationException("Cancelled by the user")
 
     companion object {
-        /** Free-tier concurrency. Premium raises this in Phase 5. */
+        /** Premium concurrency; the free tier runs one at a time (see PaywallGate). */
         const val MAX_CONCURRENT = 3
 
         private const val PART_DIRECTORY = "downloads"

@@ -18,12 +18,22 @@ class DownloadStarter @Inject constructor(
     private val repository: DownloadRepository,
 ) {
 
-    suspend fun enqueue(candidate: MediaCandidate): DownloadRepository.EnqueueResult {
+    suspend fun enqueue(candidate: MediaCandidate): StartResult {
+        // Counted before this one joins the queue: it is what the person is
+        // asking to run alongside.
+        val othersRunning = repository.activeCount()
         val result = repository.enqueue(candidate)
         // Even for a duplicate: the existing row may be paused or failed, and
         // the user just asked for it again.
         if (result.alreadyExisted) repository.requeue(result.id)
         DownloadService.start(context)
-        return result
+        return StartResult(id = result.id, alreadyExisted = result.alreadyExisted, othersRunning = othersRunning)
     }
+
+    data class StartResult(
+        val id: Long,
+        val alreadyExisted: Boolean,
+        /** Downloads already transferring when this one was asked for. */
+        val othersRunning: Int,
+    )
 }

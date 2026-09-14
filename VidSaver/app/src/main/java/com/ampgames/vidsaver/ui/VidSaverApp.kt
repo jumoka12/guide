@@ -3,6 +3,10 @@ package com.ampgames.vidsaver.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.ampgames.vidsaver.domain.premium.PaywallSource
+import kotlinx.coroutines.flow.Flow
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.media3.common.util.UnstableApi
@@ -18,7 +22,18 @@ import com.ampgames.vidsaver.ui.navigation.VidSaverNavHost
 @Composable
 fun VidSaverApp(
     navController: NavHostController = rememberNavController(),
+    paywallRequests: Flow<PaywallSource> = hiltViewModel<AppShellViewModel>().paywallRequests,
 ) {
+    // The coordinator decides when; the shell only navigates. One paywall at
+    // a time: a request while it is already up is dropped.
+    LaunchedEffect(navController, paywallRequests) {
+        paywallRequests.collect { source ->
+            if (navController.currentDestination?.route != FullScreenRoutes.PAYWALL) {
+                navController.navigate(FullScreenRoutes.paywall(source)) { launchSingleTop = true }
+            }
+        }
+    }
+
     val backStackEntry by navController.currentBackStackEntryAsState()
     val route = backStackEntry?.destination?.route
     val current = VidSaverDestination.fromRoute(route)

@@ -187,6 +187,9 @@ dependencies {
 
     implementation(libs.androidx.datastore.preferences)
 
+    // Phase 5: subscriptions. Google Play Billing comes in transitively.
+    implementation(libs.revenuecat.purchases)
+
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     // Decodes a frame from a video file for gallery thumbnails.

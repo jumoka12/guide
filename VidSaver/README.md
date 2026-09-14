@@ -68,7 +68,6 @@ Edit `assets/config/app_config.json` — no code change needed:
 | Key | Effect |
 | --- | --- |
 | `ads.enabled` | Master switch. `false` makes every ad path a no-op. |
-| `ads.launch_route_mode` | `0` never / `1` first session / `2` every launch shows the launch interstitial. |
 | `ads.interstitial_capping_minutes` | Minimum minutes between interstitials. |
 | `ads.happy_moment_mode` / `happy_moment_capping` | Post-download interstitial and its per-session cap. |
 | `ads.mrec_refresh_after_impressions` | Impressions before the browser MREC reloads. |
@@ -76,7 +75,12 @@ Edit `assets/config/app_config.json` — no code change needed:
 | `ads.post_bidding_enabled` | Turns the Google Ad Manager post-bidder on or off. |
 | `ads.max_units.*` | AppLovin MAX ad unit IDs. |
 | `ads.gam_units.*` | Google Ad Manager ad unit paths used by the post-bidder. |
+| `ads.launch_route_mode` | `0` nothing at launch / `1` interstitial only / `2` paywall, then the interstitial if the paywall was skipped / `3` paywall only. |
+| `ads.postpone_launch_route_sessions` | Sessions to wait before the launch route fires at all. |
+| `iap.entitlement`, `iap.default_sku` | RevenueCat entitlement id and the plan preselected on the paywall. |
 | `iap.offer_on_resume_every` | Show the paywall on every N-th resume; `0` disables. |
+| `iap.offer_new_installers_only` | Automatic paywalls only for installs that first opened this version. |
+| `iap.onboarding_paywall` | Show the paywall after onboarding *(Phase 7)*. |
 | `engagement.rateus_session_start` | Session number at which the in-app review prompt may fire. |
 | `browser.blocked_domains` | Domains the browser refuses to load. |
 
@@ -242,6 +246,42 @@ than something surprising.
 mid-playback keeps the same video playing, and a video deleted underneath falls
 back to whatever now occupies that position instead of restarting the queue.
 
+### Subscriptions and the paywall (Phase 5)
+
+Premium is one RevenueCat entitlement, `premium`, sold through the `default`
+offering as three packages: `vs_monthly_7d_trial` (7-day trial), `vs_yearly`
+and `vs_lifetime`. Create the products in Play Console and the offering in
+RevenueCat with those ids; the app never hardcodes a price, period or trial
+length — every figure on the paywall is read from the store product.
+
+- `PremiumRepository` (`data/billing`) is the app's one view of premium:
+  `state: StateFlow<PremiumState>` app-wide, plus `offering()`, `purchase()`
+  and `restore()`. `RevenueCatPremiumRepository` implements it; with an empty
+  `REVENUECAT_KEY` the `NoBillingPremiumRepository` stands in, the install
+  runs as free, and the paywall says plans cannot be loaded.
+- `PaywallGate` (`domain/premium`, unit-tested) holds every cadence rule:
+  launch (`ads.launch_route_mode` 2 or 3, after
+  `postpone_launch_route_sessions`), every N-th resume, a second concurrent
+  download, and the two-minute floor between automatic paywalls. A premium
+  or not-yet-known state never gets an automatic paywall.
+- `PaywallCoordinator` counts sessions and resumes through the process
+  lifecycle, applies the gate, and emits `PaywallSource` requests. The app
+  shell navigates; screens never reason about cadence. Settings and the
+  home-page crown request the paywall directly.
+- `PaywallScreen` is native Compose: benefits, plan cards with the store's
+  price and trial, the selected plan's exact terms, "Restore purchases", and
+  "Continue with free version" pinned on screen in every state.
+- Free installs transfer one download at a time; premium runs three
+  (`DownloadEngine` reads `PaywallGate.concurrentDownloadsFor`). A second
+  download still queues for a free install — it is the moment the paywall
+  explains what premium adds, not a wall in front of the feature.
+- When premium, every ad path is a no-op *(Phase 6 reads the same state)*.
+
+To test with real products: put the RevenueCat **public** Android key in
+`local.properties` as `REVENUECAT_KEY=goog_...`, add the debug applicationId
+(`com.ampgames.vidsaver.debug`) as a Play licence tester or use a RevenueCat
+sandbox, and open Settings → VidSaver Premium.
+
 ### Ad blocking
 
 `assets/hosts_blocklist.txt` is a **placeholder**; replace it with a real list.
@@ -285,7 +325,7 @@ These constraints are requirements, not preferences:
 - [x] Notification runtime permission requested in context, at the first save
 - [x] Foreground service type `dataSync` with a user-visible download notification
 - [x] `WRITE_EXTERNAL_STORAGE` declared only up to API 28; scoped storage above
-- [ ] Paywall shows price, trial length, cancel terms, and a free-tier exit *(Phase 5)*
+- [x] Paywall shows price, trial length, cancel terms, and a free-tier exit (`PaywallScreenTest`)
 - [ ] Data safety form matches [`data-safety.md`](data-safety.md) *(Phase 7)*
 - [ ] Release build signed from `keystore.properties`, R8 rules verified per SDK
 
@@ -302,7 +342,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | 2 | Browser: WebView, tabs, bookmarks, history, ad-blocker, video sniffing, extractor registry, HLS strategy | Done |
 | 3 | Download engine: Room-backed repository, foreground service, resumable/concurrent downloads, MediaStore | Done |
 | 4 | Gallery and Media3 player | Done |
-| 5 | Subscriptions via RevenueCat and the paywall | Not started |
+| 5 | Subscriptions via RevenueCat and the paywall | Done |
 | 6 | Ads: AppLovin MAX + GAM post-bidding, UMP consent, `AdPolicy` | Not started |
 | 7 | Analytics, Crashlytics, rate prompt, onboarding, localization, Play readiness | Not started |
 

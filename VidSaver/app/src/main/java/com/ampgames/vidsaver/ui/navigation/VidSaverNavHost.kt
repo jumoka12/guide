@@ -14,15 +14,27 @@ import com.ampgames.vidsaver.ui.gallery.GalleryScreen
 import com.ampgames.vidsaver.ui.player.PlayerScreen
 import com.ampgames.vidsaver.ui.player.PlayerViewModel
 import com.ampgames.vidsaver.ui.settings.SettingsScreen
+import com.ampgames.vidsaver.ui.paywall.PaywallScreen
+import com.ampgames.vidsaver.ui.paywall.PaywallViewModel
+import com.ampgames.vidsaver.domain.premium.PaywallSource
+import androidx.compose.ui.platform.LocalContext
+import android.content.ActivityNotFoundException
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import timber.log.Timber
 
 /** Full-screen routes that sit outside the bottom navigation. */
 object FullScreenRoutes {
     const val PLAYER = "player/{${PlayerViewModel.ARG_VIDEO_ID}}"
+    const val PAYWALL = "paywall/{${PaywallViewModel.ARG_SOURCE}}"
 
     fun player(videoId: Long): String = "player/$videoId"
 
+    fun paywall(source: PaywallSource): String = "paywall/${source.name}"
+
     /** True when [route] should be shown without the bottom bar. */
-    fun isFullScreen(route: String?): Boolean = route == PLAYER
+    fun isFullScreen(route: String?): Boolean = route == PLAYER || route == PAYWALL
 }
 
 @UnstableApi
@@ -45,7 +57,22 @@ fun VidSaverNavHost(
             )
         }
 
-        composable(VidSaverDestination.SETTINGS.route) { SettingsScreen() }
+        composable(VidSaverDestination.SETTINGS.route) {
+            SettingsScreen(
+                onOpenPaywall = { navController.navigate(FullScreenRoutes.paywall(PaywallSource.SETTINGS)) },
+            )
+        }
+
+        composable(
+            route = FullScreenRoutes.PAYWALL,
+            arguments = listOf(navArgument(PaywallViewModel.ARG_SOURCE) { type = NavType.StringType }),
+        ) {
+            val context = LocalContext.current
+            PaywallScreen(
+                onClose = { navController.popBackStack() },
+                onOpenUrl = { url -> openExternal(context, url) },
+            )
+        }
 
         composable(
             route = FullScreenRoutes.PLAYER,
@@ -55,5 +82,15 @@ fun VidSaverNavHost(
         ) {
             PlayerScreen(onBack = { navController.popBackStack() })
         }
+    }
+}
+
+/** Opens [url] in whatever handles it; a missing handler is logged, not fatal. */
+private fun openExternal(context: Context, url: String) {
+    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        Timber.w(e, "No handler for %s", url)
     }
 }

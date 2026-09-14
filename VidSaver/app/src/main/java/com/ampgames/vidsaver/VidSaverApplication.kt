@@ -7,6 +7,12 @@ import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
 import com.ampgames.vidsaver.core.logging.CrashRecord
+import com.ampgames.vidsaver.data.billing.PaywallCoordinator
+import com.ampgames.vidsaver.data.billing.PremiumRepository
+import com.ampgames.vidsaver.data.billing.RevenueCatPremiumRepository
+import com.revenuecat.purchases.LogLevel
+import com.revenuecat.purchases.Purchases
+import com.revenuecat.purchases.PurchasesConfiguration
 import com.ampgames.vidsaver.core.logging.ReleaseTree
 import com.ampgames.vidsaver.data.download.DownloadNotifications
 import dagger.hilt.android.HiltAndroidApp
@@ -50,11 +56,37 @@ class VidSaverApplication : Application(), Configuration.Provider, ImageLoaderFa
         .crossfade(true)
         .build()
 
+    @Inject
+    lateinit var premiumRepository: Provider<PremiumRepository>
+
+    @Inject
+    lateinit var paywallCoordinator: Provider<PaywallCoordinator>
+
     override fun onCreate() {
         super.onCreate()
         initLogging()
         installUncaughtExceptionLogger()
         initNotificationChannels()
+        initBilling()
+    }
+
+    /**
+     * Configures RevenueCat when a key is present and starts watching the
+     * process lifecycle for paywall triggers. Isolated like every other step:
+     * a store SDK that fails to configure leaves the app free, not dead.
+     */
+    private fun initBilling() {
+        runCatching {
+            val key = BuildConfig.REVENUECAT_KEY
+            if (key.isNotBlank()) {
+                Purchases.logLevel = if (BuildConfig.DEBUG) LogLevel.DEBUG else LogLevel.WARN
+                Purchases.configure(PurchasesConfiguration.Builder(this, key).build())
+                (premiumRepository.get() as? RevenueCatPremiumRepository)?.start()
+            } else {
+                Timber.i("REVENUECAT_KEY is empty; running as free with no store")
+            }
+            paywallCoordinator.get().start()
+        }.onFailure { Timber.e(it, "Billing could not be initialised") }
     }
 
     private fun initLogging() {
