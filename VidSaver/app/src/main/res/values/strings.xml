@@ -10,6 +10,7 @@
 
     <!-- Browser -->
     <string name="browser_home_title">Browse and save</string>
+    <string name="browser_menu">More</string>
     <string name="browser_home_subtitle">Open a site, play a video, then tap the download button.</string>
     <string name="browser_address_hint">Search or enter address</string>
     <string name="browser_search_engine">Search engine</string>
@@ -126,8 +127,8 @@
     <string name="player_background_audio">Keep audio playing in the background</string>
 
     <!-- Placeholders for features landing in later phases -->
-    <string name="placeholder_downloads">Your active and finished downloads will appear here.</string>
-    <string name="placeholder_gallery">Videos you save will appear here.</string>
+    <string name="placeholder_downloads">Videos you save will show their progress here.</string>
+    <string name="placeholder_gallery">Open a site in the Browser tab and save a video to start your library.</string>
 
     <!-- Transient messages -->
     <string name="msg_site_not_supported">This site isn\'t supported. VidSaver doesn\'t work with YouTube or other Google video services.</string>

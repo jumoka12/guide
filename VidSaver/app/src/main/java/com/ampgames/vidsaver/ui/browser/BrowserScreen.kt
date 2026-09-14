@@ -26,7 +26,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ampgames.vidsaver.R
 import com.ampgames.vidsaver.ui.browser.components.BookmarksSheet
 import com.ampgames.vidsaver.ui.browser.components.BrowserHome
-import com.ampgames.vidsaver.ui.browser.components.BrowserToolbar
 import com.ampgames.vidsaver.ui.browser.components.BrowserTopBar
 import com.ampgames.vidsaver.ui.browser.components.CandidatesSheet
 import com.ampgames.vidsaver.ui.browser.components.TabsSheet
@@ -74,15 +73,6 @@ fun BrowserScreen(
                 onReload = viewModel::onReloadClicked,
                 onHome = viewModel::onHomeClicked,
                 onToggleBookmark = viewModel::onToggleBookmark,
-            )
-        },
-        bottomBar = {
-            BrowserToolbar(
-                tabCount = state.tabs.size,
-                adBlockEnabled = state.adBlockEnabled,
-                siteAllowlisted = state.siteAllowlisted,
-                desktopMode = state.desktopMode,
-                hasPageOpen = !state.showHome,
                 onTabs = viewModel::onTabsClicked,
                 onBookmarks = viewModel::onBookmarksClicked,
                 onToggleAdBlock = viewModel::onToggleAdBlock,

@@ -15,48 +15,59 @@ private val LightColors = lightColorScheme(
     onPrimary = BrandOnPrimary,
     primaryContainer = BrandPrimaryContainer,
     onPrimaryContainer = BrandOnPrimaryContainer,
-    secondary = BrandSecondary,
-    onSecondary = BrandOnSecondary,
-    secondaryContainer = BrandSecondaryContainer,
-    onSecondaryContainer = BrandOnSecondaryContainer,
-    tertiary = BrandTertiary,
-    onTertiary = BrandOnTertiary,
+    secondary = LightSecondary,
+    onSecondary = BrandOnPrimary,
+    secondaryContainer = LightSecondaryContainer,
+    onSecondaryContainer = LightOnSecondaryContainer,
+    tertiary = LightSecondary,
+    onTertiary = BrandOnPrimary,
     error = BrandError,
     onError = BrandOnError,
+    errorContainer = BrandErrorContainer,
+    onErrorContainer = BrandOnErrorContainer,
     background = LightBackground,
-    onBackground = LightOnBackground,
-    surface = LightBackground,
-    onSurface = LightOnBackground,
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
     surfaceVariant = LightSurfaceVariant,
     onSurfaceVariant = LightOnSurfaceVariant,
     outline = LightOutline,
+    outlineVariant = LightOutlineVariant,
 )
 
 private val DarkColors = darkColorScheme(
     primary = DarkPrimary,
     onPrimary = DarkOnPrimary,
     primaryContainer = DarkPrimaryContainer,
-    onPrimaryContainer = BrandPrimaryContainer,
+    onPrimaryContainer = DarkOnPrimaryContainer,
     secondary = DarkSecondary,
-    onSecondary = DarkOnSecondary,
-    tertiary = DarkTertiary,
-    onTertiary = DarkOnTertiary,
+    onSecondary = DarkOnPrimary,
+    secondaryContainer = DarkSecondaryContainer,
+    onSecondaryContainer = DarkOnSecondaryContainer,
+    tertiary = DarkSecondary,
+    onTertiary = DarkOnPrimary,
     error = BrandError,
     onError = BrandOnError,
     background = DarkBackground,
-    onBackground = DarkOnBackground,
-    surface = DarkBackground,
-    onSurface = DarkOnBackground,
+    onBackground = DarkOnSurface,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
     surfaceVariant = DarkSurfaceVariant,
     onSurfaceVariant = DarkOnSurfaceVariant,
     outline = DarkOutline,
+    outlineVariant = DarkOutlineVariant,
 )
 
+/**
+ * @param dynamicColor Material You. Supported, but **off by default**: dynamic
+ *   colour repaints the app in whatever hue the user's wallpaper produces, which
+ *   leaves VidSaver with no identity of its own. Phase 7 surfaces this as a
+ *   Settings toggle for people who prefer their system palette.
+ */
 @Composable
 fun VidSaverTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    /** Material You. Honoured only on Android 12+, where dynamic color exists. */
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
@@ -71,6 +82,7 @@ fun VidSaverTheme(
     MaterialTheme(
         colorScheme = colorScheme,
         typography = VidSaverTypography,
+        shapes = VidSaverShapes,
         content = content,
     )
 }

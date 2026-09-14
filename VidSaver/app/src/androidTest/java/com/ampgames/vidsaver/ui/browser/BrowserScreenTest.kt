@@ -9,7 +9,7 @@ import androidx.compose.ui.test.performTextInput
 import com.ampgames.vidsaver.MainActivity
 import com.ampgames.vidsaver.ui.browser.components.ADDRESS_BAR_TEST_TAG
 import com.ampgames.vidsaver.ui.browser.components.BROWSER_HOME_TEST_TAG
-import com.ampgames.vidsaver.ui.browser.components.BROWSER_TOOLBAR_TEST_TAG
+import com.ampgames.vidsaver.ui.browser.components.BROWSER_MENU_TEST_TAG
 import com.ampgames.vidsaver.ui.browser.components.TABS_SHEET_TEST_TAG
 import dagger.hilt.android.testing.HiltAndroidRule
 import dagger.hilt.android.testing.HiltAndroidTest
@@ -40,9 +40,17 @@ class BrowserScreenTest {
     }
 
     @Test
-    fun addressBarAndToolbarArePresent() {
+    fun addressBarAndMenuArePresent() {
         composeRule.onNodeWithTag(ADDRESS_BAR_TEST_TAG).assertIsDisplayed()
-        composeRule.onNodeWithTag(BROWSER_TOOLBAR_TEST_TAG).assertIsDisplayed()
+        composeRule.onNodeWithTag(BROWSER_MENU_TEST_TAG).assertIsDisplayed()
+    }
+
+    /** Bookmarks and ad blocking moved out of the old second bottom bar. */
+    @Test
+    fun theOverflowMenuExposesBookmarksAndAdBlocking() {
+        composeRule.onNodeWithTag(BROWSER_MENU_TEST_TAG).performClick()
+        composeRule.onNodeWithTag("open_bookmarks").assertIsDisplayed()
+        composeRule.onNodeWithTag("toggle_adblock").assertIsDisplayed()
     }
 
     @Test
