@@ -65,6 +65,9 @@ sealed interface BrowserCommand {
 
     /** Save the current tab's WebView state, then show [tab]. */
     data class SwitchTab(val tab: BrowserTab) : BrowserCommand
+
+    /** Render [html] directly, as an origin-less page. Used by the playback self-test. */
+    data class LoadHtml(val html: String) : BrowserCommand
     data class SetDesktopMode(val enabled: Boolean) : BrowserCommand
 }
 

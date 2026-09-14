@@ -93,6 +93,8 @@ data class Activity(
     val isActive: Boolean = false,
     /** Fraction of the element inside the viewport, 0..1. */
     val visibleFraction: Double = 0.0,
+    /** The element's readyState/networkState/error line, for the debug log. */
+    val debug: String? = null,
 ) {
     /**
      * Higher is more likely to be "the video on screen". Playing beats

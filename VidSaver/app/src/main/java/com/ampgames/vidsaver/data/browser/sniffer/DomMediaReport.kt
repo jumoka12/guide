@@ -26,6 +26,8 @@ data class DomMediaReport(
     val active: Boolean = false,
     /** Fraction of the element inside the viewport, 0..1. */
     val visible: Double? = null,
+    /** Playback diagnostics ("rs=4 ns=2 err=0 …"), for the debug log only. */
+    val state: String? = null,
 ) {
     /**
      * Absolute form of [url] against [pageUrl], or null when the URL is not

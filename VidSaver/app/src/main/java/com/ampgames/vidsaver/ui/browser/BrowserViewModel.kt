@@ -458,6 +458,51 @@ class BrowserViewModel @Inject constructor(
         mediaSniffer.defaultUserAgent = userAgent
     }
 
+    /** What the view layer knows about the live WebView, for the debug log. */
+    @Volatile
+    private var webViewInfo: String = "(no WebView yet)"
+
+    fun onWebViewInfo(info: String) {
+        webViewInfo = info
+    }
+
+    /**
+     * A snapshot of the browser's state for the debug log: where we are, what
+     * the WebView is, what the sniffer saw, what the sheet would offer. This
+     * is the part a screenshot cannot show.
+     */
+    fun describeForDiagnostics(): String {
+        val state = _uiState.value
+        return buildString {
+            appendLine("Page: ${state.currentUrl.ifBlank { "(home)" }}")
+            appendLine("WebView: $webViewInfo")
+            appendLine("Ad blocking: ${state.adBlockEnabled} (site allowlisted: ${state.siteAllowlisted}), desktop: ${state.desktopMode}")
+            appendLine()
+            appendLine("Sniffed media (${mediaSniffer.media.value.size}):")
+            appendLine(mediaSniffer.describe())
+            appendLine()
+            appendLine("Candidates (${state.candidates.size}):")
+            state.candidates.forEach { c ->
+                appendLine(
+                    "  ${c.type} ${c.resolutionLabel ?: "?"} size=${c.sizeBytes ?: "?"} " +
+                        "primary=${c.isPrimary} activity=${c.activityScore} audio=${c.hasAudio} " +
+                        "${Urls.host(c.url)}",
+                )
+            }
+        }
+    }
+
+    /**
+     * Loads a page of our own with one plain `<video>`, so a black player can
+     * be told apart from a broken site: if this one shows frames, the WebView
+     * can play video and the fault is the site's; if it stays black too, the
+     * fault is ours.
+     */
+    fun onTestVideoPlayback() {
+        currentPageHtml = ""
+        send(BrowserCommand.LoadHtml(PLAYBACK_TEST_PAGE))
+    }
+
     // ----------------------------------------------------------------- internals
 
     private fun refreshBookmarkState(url: String) {
@@ -480,5 +525,30 @@ class BrowserViewModel @Inject constructor(
     companion object {
         const val MAX_HTML_CHARS = 512 * 1024
         private const val EXTRACTION_DEBOUNCE_MS = 350L
+
+        /**
+         * A page with one ordinary `<video>` and a live readout of its state.
+         * The clip is a public sample; nothing about it is special, which is
+         * the point.
+         */
+        private val PLAYBACK_TEST_PAGE = """
+            <!doctype html><html><head><meta name="viewport" content="width=device-width">
+            <style>body{background:#1a1a1c;color:#eee;font-family:sans-serif;margin:16px}
+            video{width:100%;background:#000}p{font-size:14px}</style></head><body>
+            <h3>Playback self-test</h3>
+            <video controls autoplay muted playsinline loop
+              src="https://www.w3schools.com/html/mov_bbb.mp4"></video>
+            <p id="s">starting…</p>
+            <p>If frames show above, this browser can play video and the problem is the site.
+            If this stays black, the problem is the app.</p>
+            <script>
+              var v=document.querySelector('video'),s=document.getElementById('s');
+              setInterval(function(){
+                s.textContent='readyState='+v.readyState+' networkState='+v.networkState+
+                  ' time='+v.currentTime.toFixed(1)+' size='+v.videoWidth+'x'+v.videoHeight+
+                  (v.error?' error='+v.error.code:'')+(v.paused?' paused':' playing');
+              },500);
+            </script></body></html>
+        """.trimIndent()
     }
 }

@@ -43,6 +43,12 @@
     }
   }
 
+  function srcScheme(url) {
+    if (!url) return 'none';
+    var i = url.indexOf(':');
+    return i > 0 ? url.substring(0, i) : '?';
+  }
+
   // How much of the element is inside the viewport, 0..1.
   function visibleFraction(el) {
     try {
@@ -89,6 +95,7 @@
       if (extra.playing) entry.playing = true;
       if (extra.active) entry.active = true;
       if (typeof extra.visible === 'number') entry.visible = extra.visible;
+      if (extra.state) entry.state = extra.state;
     }
     out.push(entry);
   }
@@ -105,7 +112,15 @@
         title: video.getAttribute('title') || null,
         playing: !video.paused && !video.ended && video.readyState > 2,
         active: video === lastActive,
-        visible: visibleFraction(video)
+        visible: visibleFraction(video),
+        // Diagnostic state, so a log can say why a player is a grey box:
+        // readyState 0 = nothing loaded, networkState 3 = no usable source,
+        // error 4 = format not supported.
+        state: 'rs=' + video.readyState + ' ns=' + video.networkState +
+          ' err=' + (video.error ? video.error.code : 0) +
+          ' t=' + (video.currentTime || 0).toFixed(1) +
+          ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
+          ' src=' + srcScheme(video.currentSrc || video.getAttribute('src'))
       };
 
       // currentSrc is what the element actually resolved to; src is what the
@@ -124,7 +139,8 @@
           title: shared.title,
           playing: shared.playing,
           active: shared.active,
-          visible: shared.visible
+          visible: shared.visible,
+          state: shared.state
         });
       }
     }

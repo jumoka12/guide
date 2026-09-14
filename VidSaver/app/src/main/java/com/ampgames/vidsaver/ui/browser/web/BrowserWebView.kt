@@ -47,6 +47,7 @@ fun BrowserWebView(
     onPageHtmlCaptured: (String) -> Unit,
     modifier: Modifier = Modifier,
     generation: Int = 0,
+    onWebViewInfo: (String) -> Unit = {},
 ) {
     val holder = remember { WebViewHolder() }
     val fullscreen = remember { FullscreenHost() }
@@ -92,13 +93,36 @@ fun BrowserWebView(
                             onTitleChanged(title)
                         }
 
-                        /** Page console output, so a site that breaks in the WebView says why in Logcat. */
+                        /**
+                         * Page console output, so a site that breaks in the
+                         * WebView says why in Logcat. Warnings and errors only,
+                         * and a message that repeats is logged once with a
+                         * count: one site's report-only policy notice printed
+                         * hundreds of times pushed everything useful out of the
+                         * debug log.
+                         */
                         override fun onConsoleMessage(message: ConsoleMessage): Boolean {
-                            Timber.tag("WebConsole").d(
+                            if (message.messageLevel() == ConsoleMessage.MessageLevel.LOG ||
+                                message.messageLevel() == ConsoleMessage.MessageLevel.DEBUG ||
+                                message.messageLevel() == ConsoleMessage.MessageLevel.TIP
+                            ) {
+                                return true
+                            }
+                            val text = message.message().take(300)
+                            if (text == holder.lastConsoleMessage) {
+                                holder.lastConsoleRepeats++
+                                return true
+                            }
+                            if (holder.lastConsoleRepeats > 0) {
+                                Timber.tag("WebConsole").w("(previous message repeated %d times)", holder.lastConsoleRepeats)
+                            }
+                            holder.lastConsoleMessage = text
+                            holder.lastConsoleRepeats = 0
+                            Timber.tag("WebConsole").w(
                                 "%s: %s (%s:%d)",
                                 message.messageLevel(),
-                                message.message(),
-                                message.sourceId(),
+                                text,
+                                message.sourceId()?.takeLast(60),
                                 message.lineNumber(),
                             )
                             return true
@@ -125,6 +149,12 @@ fun BrowserWebView(
             update = { webView ->
                 holder.webView = webView
                 WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
+                // Attached by now, so this answers truthfully. A WebView that is
+                // not hardware accelerated paints pages but never a video frame.
+                onWebViewInfo(
+                    "hwAccelerated=${webView.isHardwareAccelerated} layerType=${webView.layerType} " +
+                        "size=${webView.width}x${webView.height} ua=${webView.settings.userAgentString}",
+                )
             },
             onRelease = { webView ->
                 fullscreen.hide()
@@ -154,6 +184,8 @@ fun BrowserWebView(
                 )
 
                 is BrowserCommand.SwitchTab -> holder.switchTab(webView, command.tab.id, command.tab.url)
+                is BrowserCommand.LoadHtml ->
+                    webView.loadDataWithBaseURL(null, command.html, "text/html", "utf-8", null)
             }
         }
     }
@@ -166,6 +198,8 @@ fun BrowserWebView(
 private class WebViewHolder {
     var webView: WebView? = null
     var defaultUserAgent: String = ""
+    var lastConsoleMessage: String? = null
+    var lastConsoleRepeats: Int = 0
 
     private val tabStates = mutableMapOf<String, Bundle>()
     private var currentTabId: String? = null

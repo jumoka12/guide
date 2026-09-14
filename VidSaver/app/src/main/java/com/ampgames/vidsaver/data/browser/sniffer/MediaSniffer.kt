@@ -65,6 +65,27 @@ class MediaSniffer @Inject constructor(
     private val probeCount = AtomicInteger(0)
     private val mediaProbeCount = AtomicInteger(0)
 
+    /** One line per sighting, for the debug log. */
+    fun describe(): String = _media.value.joinToString("\n") { m ->
+        val where = Urls.host(m.url).orEmpty() + m.url.substringAfter(Urls.host(m.url).orEmpty(), "")
+            .substringBefore('?').takeLast(40)
+        buildString {
+            append(m.source.name.padEnd(7)).append(' ')
+            append(where)
+            m.mimeType?.let { append("  mime=").append(it) }
+            m.contentLength?.let { append("  size=").append(it) }
+            m.height?.let { append("  h=").append(it) }
+            if (m.activity != Activity.NONE) {
+                append("  playing=").append(m.activity.isPlaying)
+                append(" active=").append(m.activity.isActive)
+                append(" visible=").append(m.activity.visibleFraction)
+                m.activity.debug?.let { append("  ").append(it) }
+            }
+            m.hlsVariantOf?.let { append("  variantOf=").append(Urls.host(it)) }
+            if (m.audioOnly) append("  audioOnly")
+        }
+    }.ifBlank { "(nothing sniffed on this page)" }
+
     /** Clears state for a new page. Called when navigation commits. */
     fun onNavigationStarted(url: String) {
         pageUrl = url
@@ -138,6 +159,7 @@ class MediaSniffer @Inject constructor(
                         isPlaying = report.playing,
                         isActive = report.active,
                         visibleFraction = report.visible?.coerceIn(0.0, 1.0) ?: 0.0,
+                        debug = report.state?.take(120),
                     ),
                 ),
             )

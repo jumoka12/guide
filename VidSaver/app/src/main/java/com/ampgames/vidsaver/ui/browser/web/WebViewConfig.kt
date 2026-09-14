@@ -1,7 +1,6 @@
 package com.ampgames.vidsaver.ui.browser.web
 
 import android.annotation.SuppressLint
-import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -85,10 +84,6 @@ object WebViewConfig {
             // blocker, which blocks the trackers themselves.
             setAcceptThirdPartyCookies(webView, true)
         }
-
-        // Video frames are composited only on a hardware layer; on a software
-        // layer the page paints and the <video> stays a black box.
-        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
         webView.isVerticalScrollBarEnabled = true
         webView.isHorizontalScrollBarEnabled = false

@@ -28,6 +28,7 @@ import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Tab
@@ -95,6 +96,7 @@ fun BrowserTopBar(
     onToggleDesktopMode: () -> Unit,
     onShowFound: () -> Unit,
     onShareLog: () -> Unit,
+    onTestVideo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (state.showHome) return
@@ -165,6 +167,7 @@ fun BrowserTopBar(
                     onToggleSiteAllowlist = onToggleSiteAllowlist,
                     onToggleDesktopMode = onToggleDesktopMode,
                     onShareLog = onShareLog,
+                    onTestVideo = onTestVideo,
                 )
             }
 
@@ -356,6 +359,7 @@ internal fun MenuButton(
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
     onShareLog: () -> Unit,
+    onTestVideo: () -> Unit,
     icon: @Composable () -> Unit = {
         Icon(Icons.Filled.MoreVert, stringResource(R.string.browser_menu))
     },
@@ -433,6 +437,13 @@ internal fun MenuButton(
                 trailingIcon = { Switch(checked = state.desktopMode, onCheckedChange = null) },
                 onClick = { dismiss(); onToggleDesktopMode() },
                 modifier = Modifier.testTag("toggle_desktop"),
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.browser_test_video)) },
+                leadingIcon = { Icon(Icons.Outlined.PlayCircle, null) },
+                onClick = { dismiss(); onTestVideo() },
+                modifier = Modifier.testTag("test_video"),
             )
 
             DropdownMenuItem(

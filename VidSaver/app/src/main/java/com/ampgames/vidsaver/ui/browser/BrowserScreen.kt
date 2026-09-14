@@ -73,7 +73,7 @@ fun BrowserScreen(
     val scope = rememberCoroutineScope()
     val shareLog: () -> Unit = {
         scope.launch {
-            val text = Diagnostics.collect(context)
+            val text = Diagnostics.collect(context, viewModel::describeForDiagnostics)
             runCatching { context.startActivity(Diagnostics.shareIntent(text)) }
         }
     }
@@ -103,6 +103,7 @@ fun BrowserScreen(
                 onToggleDesktopMode = viewModel::onToggleDesktopMode,
                 onShowFound = viewModel::onCandidatesClicked,
                 onShareLog = shareLog,
+                onTestVideo = viewModel::onTestVideoPlayback,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -133,6 +134,7 @@ fun BrowserScreen(
                 onUserAgentResolved = viewModel::onUserAgentResolved,
                 onPageHtmlCaptured = viewModel::onPageHtmlCaptured,
                 generation = state.webViewGeneration,
+                onWebViewInfo = viewModel::onWebViewInfo,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -154,6 +156,7 @@ fun BrowserScreen(
                     onToggleSiteAllowlist = viewModel::onToggleSiteAllowlist,
                     onToggleDesktopMode = viewModel::onToggleDesktopMode,
                     onShareLog = shareLog,
+                    onTestVideo = viewModel::onTestVideoPlayback,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

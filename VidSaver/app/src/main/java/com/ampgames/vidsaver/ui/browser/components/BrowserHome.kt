@@ -69,6 +69,7 @@ fun BrowserHome(
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
     onShareLog: () -> Unit,
+    onTestVideo: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -93,6 +94,7 @@ fun BrowserHome(
                 onToggleSiteAllowlist = onToggleSiteAllowlist,
                 onToggleDesktopMode = onToggleDesktopMode,
                 onShareLog = onShareLog,
+                onTestVideo = onTestVideo,
                 icon = { Icon(Icons.Filled.Menu, stringResource(R.string.browser_menu)) },
             )
             Spacer(modifier = Modifier.weight(1f))
