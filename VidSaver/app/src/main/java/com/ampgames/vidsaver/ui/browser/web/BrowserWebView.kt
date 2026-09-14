@@ -2,9 +2,12 @@ package com.ampgames.vidsaver.ui.browser.web
 
 import android.annotation.SuppressLint
 import android.os.Bundle
+import android.view.View
 import android.webkit.WebChromeClient
 import android.webkit.WebView
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -12,6 +15,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ampgames.vidsaver.data.browser.sniffer.VideoSnifferBridge
 import com.ampgames.vidsaver.ui.browser.BrowserCommand
+import com.ampgames.vidsaver.ui.util.findActivity
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -42,6 +46,13 @@ fun BrowserWebView(
     modifier: Modifier = Modifier,
 ) {
     val holder = remember { WebViewHolder() }
+    val fullscreen = remember { FullscreenHost() }
+
+    // Back leaves fullscreen video before it leaves the page, as in every browser.
+    BackHandler(enabled = fullscreen.isFullscreen) { fullscreen.hide() }
+    DisposableEffect(fullscreen) {
+        onDispose { fullscreen.hide() }
+    }
 
     // Capture page source once each load finishes, for the extractors.
     LaunchedEffect(client) {
@@ -72,6 +83,19 @@ fun BrowserWebView(
                     override fun onReceivedTitle(view: WebView, title: String?) {
                         onTitleChanged(title)
                     }
+
+                    override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                        val activity = context.findActivity()
+                        if (activity == null) {
+                            callback.onCustomViewHidden()
+                            return
+                        }
+                        fullscreen.show(activity, view, callback)
+                    }
+
+                    override fun onHideCustomView() {
+                        fullscreen.hide()
+                    }
                 }
                 addJavascriptInterface(bridge, VideoSnifferBridge.INTERFACE_NAME)
                 WebViewScripts.preload(context.applicationContext)
@@ -83,6 +107,7 @@ fun BrowserWebView(
             WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
         },
         onRelease = { webView ->
+            fullscreen.hide()
             client.onPageLoaded = null
             webView.stopLoading()
             webView.removeJavascriptInterface(VideoSnifferBridge.INTERFACE_NAME)

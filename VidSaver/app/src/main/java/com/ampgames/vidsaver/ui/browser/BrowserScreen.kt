@@ -5,10 +5,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -167,14 +166,23 @@ private fun DownloadFab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Solid brand colour: this is the one action the screen exists for, and a
+    // tonal container reads as "disabled" next to a busy web page. The count
+    // lives in the label rather than a badge, which collided with the icon.
     ExtendedFloatingActionButton(
         onClick = onClick,
         modifier = modifier.testTag(DOWNLOAD_FAB_TEST_TAG),
-        icon = {
-            BadgedBox(badge = { Badge { Text("$count") } }) {
-                Icon(Icons.Filled.Download, contentDescription = null)
-            }
+        containerColor = MaterialTheme.colorScheme.primary,
+        contentColor = MaterialTheme.colorScheme.onPrimary,
+        icon = { Icon(Icons.Filled.Download, contentDescription = null) },
+        text = {
+            Text(
+                if (count == 1) {
+                    stringResource(R.string.browser_download_available)
+                } else {
+                    stringResource(R.string.browser_download_count, count)
+                },
+            )
         },
-        text = { Text(stringResource(R.string.browser_download_available)) },
     )
 }

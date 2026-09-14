@@ -86,8 +86,10 @@ class MediaSniffer @Inject constructor(
         if (!seen.add(MediaIdentity.contentKey(canonical))) return
 
         val headers = buildHeaders(canonical, requestHeaders)
+        val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical)
 
-        if (MediaTypes.looksLikeMediaUrl(canonical)) {
+        if (looksLikeMedia) {
+            // Offer it straight away; the probe below only adds the size.
             record(
                 SniffedMedia(
                     url = canonical,
@@ -98,11 +100,10 @@ class MediaSniffer @Inject constructor(
                     detectedAt = System.currentTimeMillis(),
                 ),
             )
-            return
         }
 
         if (shouldProbe(canonical)) {
-            scope.launch { probeContentType(canonical, headers) }
+            scope.launch { probeContentType(canonical, headers, alreadyRecorded = looksLikeMedia) }
         }
     }
 
@@ -132,7 +133,17 @@ class MediaSniffer @Inject constructor(
         }
     }
 
-    private suspend fun probeContentType(url: String, headers: Map<String, String>) {
+    /**
+     * A one-byte ranged GET to learn what a URL really is. For an ambiguous URL
+     * this decides whether it is media at all; for one that already looked like
+     * media it fills in the size, which is what lets a person tell a 720p file
+     * from a 1080p one when the server names neither.
+     */
+    private suspend fun probeContentType(
+        url: String,
+        headers: Map<String, String>,
+        alreadyRecorded: Boolean,
+    ) {
         probeCount.incrementAndGet()
         withContext(ioDispatcher) {
             runCatching {
@@ -146,15 +157,18 @@ class MediaSniffer @Inject constructor(
 
                 client.newCall(request).execute().use { response ->
                     val contentType = response.header("Content-Type")
-                    if (!MediaTypes.isVideoMime(contentType)) return@use
+                    val length = totalLengthFrom(response.header("Content-Range"))
+                        ?: response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 1 }
+                    val isVideo = MediaTypes.isVideoMime(contentType)
+                    if (!isVideo && !alreadyRecorded) return@use
 
                     record(
                         SniffedMedia(
                             url = url,
                             pageUrl = pageUrl,
-                            mimeType = contentType,
+                            mimeType = contentType.takeIf { isVideo },
                             headers = headers,
-                            contentLength = totalLengthFrom(response.header("Content-Range")),
+                            contentLength = length,
                             source = SniffSource.NETWORK,
                             detectedAt = System.currentTimeMillis(),
                         ),
@@ -169,11 +183,14 @@ class MediaSniffer @Inject constructor(
 
         val key = MediaIdentity.contentKey(media.url)
         _media.update { current ->
-            val alreadyHave = current.any {
+            val index = current.indexOfFirst {
                 MediaIdentity.contentKey(it.url) == key && it.source == media.source
             }
             when {
-                alreadyHave -> current
+                // Seen before: keep the row, absorb whatever this sighting adds.
+                index >= 0 -> current.toMutableList().also { list ->
+                    list[index] = list[index].enrichedWith(media)
+                }
                 // A page that keeps loading video must not grow this list without
                 // bound; the extractor caps what is shown, but the sniffer holds
                 // the raw observations.

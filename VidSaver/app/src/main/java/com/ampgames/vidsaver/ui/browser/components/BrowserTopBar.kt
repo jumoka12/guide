@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,8 +46,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.ampgames.vidsaver.R
 import com.ampgames.vidsaver.ui.browser.BrowserUiState
@@ -161,6 +164,15 @@ fun BrowserTopBar(
     }
 }
 
+/**
+ * The address pill.
+ *
+ * A plain string-valued TextField puts the cursor at the end whenever the URL
+ * changes, so a long address scrolls to its tail and the user sees
+ * "…4194402202515" instead of the site. Driving the field with a
+ * [TextFieldValue] pins the view to the start while unfocused and selects
+ * everything on focus, so one tap replaces the URL — the way a browser works.
+ */
 @Composable
 private fun AddressField(
     state: BrowserUiState,
@@ -170,12 +182,36 @@ private fun AddressField(
     onReload: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var focused by remember { mutableStateOf(false) }
+    var fieldValue by remember { mutableStateOf(TextFieldValue(state.addressText)) }
+
+    LaunchedEffect(state.addressText, focused) {
+        fieldValue = when {
+            // Unfocused: mirror the model, anchored to the start of the URL.
+            !focused -> TextFieldValue(state.addressText, TextRange.Zero)
+            // The model changed under an active edit (a tab switch, say).
+            fieldValue.text != state.addressText ->
+                TextFieldValue(state.addressText, TextRange(0, state.addressText.length))
+            else -> fieldValue
+        }
+    }
+
     TextField(
-        value = state.addressText,
-        onValueChange = onAddressChange,
+        value = fieldValue,
+        onValueChange = { value ->
+            fieldValue = value
+            if (value.text != state.addressText) onAddressChange(value.text)
+        },
         modifier = modifier
             .height(46.dp)
-            .onFocusChanged { onAddressFocusChange(it.isFocused) }
+            .onFocusChanged {
+                val gained = it.isFocused && !focused
+                focused = it.isFocused
+                if (gained) {
+                    fieldValue = fieldValue.copy(selection = TextRange(0, fieldValue.text.length))
+                }
+                onAddressFocusChange(it.isFocused)
+            }
             .testTag(ADDRESS_BAR_TEST_TAG),
         singleLine = true,
         shape = MaterialTheme.shapes.extraLarge,

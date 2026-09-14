@@ -46,6 +46,8 @@
     <string name="candidates_title">%1$d video(s) found</string>
     <string name="candidates_subtitle">Only media this page already loaded for playback is listed.</string>
     <string name="candidates_download">Save</string>
+    <string name="candidates_other_files">Other files on this page (%1$d)</string>
+    <string name="browser_download_count">Download (%1$d)</string>
 
     <!-- Downloads -->
     <string name="downloads_section_active">In progress</string>

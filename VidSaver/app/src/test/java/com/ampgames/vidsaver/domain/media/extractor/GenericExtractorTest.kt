@@ -205,6 +205,64 @@ class GenericExtractorTest {
         assertEquals(1, result.size)
     }
 
+    // --- Regression: twelve rows for one clip, none of them the page's own -------
+
+    /**
+     * A feed streams one clip as many quality tiers and audio tracks, each a
+     * different file. The page's own `<video>`/`og:video` is the one row that
+     * should lead; the tiers are alternatives, not peers.
+     */
+    @Test
+    fun `what the page itself named comes first and is marked primary`() = runTest {
+        val tiers = (1..11).map { i ->
+            SniffedMedia(fbChunk("tier$i.mp4", 0, 99_999, "sig$i"), pageUrl, source = SniffSource.NETWORK)
+        }
+        val declared = SniffedMedia(
+            url = "https://video.xx.fbcdn.net/v/t42/declared.mp4?oh=abc&oe=123",
+            pageUrl = pageUrl,
+            posterUrl = "https://scontent.xx.fbcdn.net/poster.jpg",
+            title = "Funny cat | Facebook",
+            source = SniffSource.DOM,
+        )
+
+        val result = extractor.extract(pageUrl, "", tiers + declared)
+
+        assertEquals(12, result.size)
+        assertTrue(result.first().isPrimary)
+        assertTrue(result.first().url.contains("declared.mp4"))
+        assertEquals(1, result.count { it.isPrimary })
+    }
+
+    @Test
+    fun `a network sighting merged into a DOM sighting stays primary`() = runTest {
+        val url = "https://cdn.example.com/movie.mp4"
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia(url, pageUrl, source = SniffSource.NETWORK, contentLength = 9_000L),
+                SniffedMedia(url, pageUrl, source = SniffSource.DOM, title = "Movie"),
+            ),
+        )
+
+        assertEquals(1, result.size)
+        assertTrue(result.single().isPrimary)
+        assertEquals(9_000L, result.single().sizeBytes)
+    }
+
+    @Test
+    fun `titles are cleaned of hashtags and site branding`() = runTest {
+        val page = "https://m.facebook.com/watch/?v=1"
+        val result = extractor.extract(
+            page,
+            "<title>Sunset #fyp #reels | Facebook</title>",
+            listOf(SniffedMedia("https://cdn.example.com/a.mp4", page)),
+        )
+
+        assertEquals("Sunset", result.single().title)
+        assertEquals("Sunset.mp4", result.single().suggestedFileName)
+    }
+
     /** A wall of options is not a chooser. */
     @Test
     fun `the candidate list is capped`() = runTest {

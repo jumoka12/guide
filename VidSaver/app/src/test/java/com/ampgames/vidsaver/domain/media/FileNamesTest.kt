@@ -2,6 +2,7 @@ package com.ampgames.vidsaver.domain.media
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -62,6 +63,47 @@ class FileNamesTest {
         assertEquals(
             "example.com.mp4",
             FileNames.forCandidate("   ", "https://example.com/p", "mp4"),
+        )
+    }
+
+    // --- cleanTitle: a caption is not a file name ------------------------------
+
+    @Test
+    fun `hashtags are stripped from a title`() {
+        assertEquals(
+            "Sunset over the bay",
+            FileNames.cleanTitle("Sunset over the bay #fyp #viral #sunset", "https://www.tiktok.com/@a/video/1"),
+        )
+    }
+
+    @Test
+    fun `the site's own name is dropped from the end of a title`() {
+        assertEquals("Funny cat", FileNames.cleanTitle("Funny cat | Facebook", "https://m.facebook.com/watch/?v=1"))
+        assertEquals("Funny cat", FileNames.cleanTitle("Funny cat - TikTok", "https://www.tiktok.com/@a/video/1"))
+        assertEquals("Funny cat", FileNames.cleanTitle("Funny cat on Instagram", "https://www.instagram.com/reel/x/"))
+    }
+
+    @Test
+    fun `a suffix that is not the site name is kept`() {
+        assertEquals(
+            "Lecture 3 - Part 2",
+            FileNames.cleanTitle("Lecture 3 - Part 2", "https://vimeo.com/123"),
+        )
+        // The site name only counts at the end.
+        assertEquals(
+            "Facebook is down again",
+            FileNames.cleanTitle("Facebook is down again", "https://m.facebook.com/watch/?v=1"),
+        )
+    }
+
+    @Test
+    fun `a title made only of hashtags is treated as missing`() {
+        assertNull(FileNames.cleanTitle("#fyp #viral #trending", "https://www.tiktok.com/@a/video/1"))
+        assertNull(FileNames.cleanTitle("   ", "https://example.com/"))
+        assertNull(FileNames.cleanTitle(null, "https://example.com/"))
+        assertEquals(
+            "tiktok.com.mp4",
+            FileNames.forCandidate("#fyp #viral", "https://www.tiktok.com/@a/video/1", "mp4"),
         )
     }
 

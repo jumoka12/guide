@@ -38,7 +38,27 @@ data class SniffedMedia(
     val title: String? = null,
     val source: SniffSource = SniffSource.NETWORK,
     val detectedAt: Long = 0L,
-)
+) {
+    /**
+     * Combines two sightings of the same content, keeping whatever either one
+     * knew. The DOM source wins because it is the page's own description of
+     * the video; the network can only see bytes.
+     */
+    fun enrichedWith(other: SniffedMedia): SniffedMedia = copy(
+        mimeType = mimeType ?: other.mimeType,
+        headers = if (headers.size >= other.headers.size) headers else other.headers,
+        contentLength = contentLength ?: other.contentLength,
+        width = width ?: other.width,
+        height = height ?: other.height,
+        posterUrl = posterUrl ?: other.posterUrl,
+        title = title ?: other.title,
+        source = if (source == SniffSource.DOM || other.source == SniffSource.DOM) {
+            SniffSource.DOM
+        } else {
+            SniffSource.NETWORK
+        },
+    )
+}
 
 /** A downloadable option shown to the user in the candidates sheet. */
 data class MediaCandidate(
@@ -54,9 +74,19 @@ data class MediaCandidate(
     val thumbnailUrl: String? = null,
     val title: String? = null,
     val suggestedFileName: String,
+    /**
+     * Where the page itself pointed at this video (DOM) versus what merely
+     * crossed the wire (NETWORK). The sheet leads with the former: a
+     * `<video>` or `og:video` is the page saying "this is the video", while
+     * the network view of one clip is a dozen quality tiers and audio tracks.
+     */
+    val source: SniffSource = SniffSource.NETWORK,
 ) {
     /** Stable identity for de-duplication and list keys. */
     val id: String get() = url
+
+    /** The page named this video; not just a file the page happened to fetch. */
+    val isPrimary: Boolean get() = source == SniffSource.DOM
 
     val resolutionLabel: String?
         get() = when {

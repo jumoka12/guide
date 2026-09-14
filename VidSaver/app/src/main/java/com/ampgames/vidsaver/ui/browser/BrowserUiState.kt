@@ -44,7 +44,13 @@ data class BrowserUiState(
 
     val showHome: Boolean get() = currentUrl.isBlank()
 
-    val candidateCount: Int get() = candidates.size
+    /**
+     * What the download button advertises: the videos the page itself named
+     * when it named any, otherwise everything that was seen. Matches the
+     * headline count in the candidates sheet.
+     */
+    val candidateCount: Int
+        get() = candidates.count { it.isPrimary }.takeIf { it > 0 } ?: candidates.size
 }
 
 /** Imperative actions the composable applies to the WebView. */

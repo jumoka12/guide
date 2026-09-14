@@ -1,8 +1,5 @@
 package com.ampgames.vidsaver.ui.player
 
-import android.app.Activity
-import android.content.Context
-import android.content.ContextWrapper
 import android.view.WindowManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -35,6 +32,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.ui.PlayerView
 import com.ampgames.vidsaver.domain.gallery.GalleryVideo
 import com.ampgames.vidsaver.domain.player.PlayerGestures
+import com.ampgames.vidsaver.ui.util.findActivity
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
 
@@ -295,12 +293,3 @@ private class PendingSeek {
 
 private const val POSITION_POLL_MS = 500L
 private const val CONTROLS_TIMEOUT_MS = 3_000L
-
-private fun Context.findActivity(): Activity? {
-    var context: Context = this
-    while (context is ContextWrapper) {
-        if (context is Activity) return context
-        context = context.baseContext
-    }
-    return null
-}

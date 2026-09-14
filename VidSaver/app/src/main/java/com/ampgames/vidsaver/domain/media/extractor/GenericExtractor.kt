@@ -52,13 +52,15 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                 val media = raw.copy(url = MediaIdentity.canonicalUrl(raw.url))
                 val key = MediaIdentity.contentKey(media.url)
                 val existing = byContent[key]
-                byContent[key] = if (existing == null) media else merge(existing, media)
+                byContent[key] = existing?.enrichedWith(media) ?: media
             }
+
+            val cleanFallback = FileNames.cleanTitle(fallbackTitle, pageUrl)
 
             return byContent.values.map { media ->
                 val type = MediaTypes.typeOf(media.url, media.mimeType)!!
                 val extension = MediaTypes.fileExtensionFor(type, media.url, media.mimeType)
-                val title = media.title?.takeIf { it.isNotBlank() } ?: fallbackTitle
+                val title = FileNames.cleanTitle(media.title, pageUrl) ?: cleanFallback
                 val resolution = media.height?.takeIf { it > 0 }?.let { "${it}p" }
                 MediaCandidate(
                     url = media.url,
@@ -77,10 +79,13 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                         extension = extension,
                         resolution = resolution,
                     ),
+                    source = media.source,
                 )
             }.sortedWith(
-                // Best quality first, then larger files, then a stable URL order.
-                compareByDescending<MediaCandidate> { it.height ?: 0 }
+                // What the page itself called a video first, then best quality,
+                // then larger files, then a stable URL order.
+                compareByDescending<MediaCandidate> { it.isPrimary }
+                    .thenByDescending { it.height ?: 0 }
                     .thenByDescending { it.sizeBytes ?: 0L }
                     .thenBy { it.url },
             ).take(MAX_CANDIDATES)
@@ -94,17 +99,6 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
          * the best candidates first, so the cap trims the tail.
          */
         const val MAX_CANDIDATES = 12
-
-        /** Keeps the richest information across two sightings of the same URL. */
-        private fun merge(a: SniffedMedia, b: SniffedMedia): SniffedMedia = a.copy(
-            mimeType = a.mimeType ?: b.mimeType,
-            headers = if (a.headers.size >= b.headers.size) a.headers else b.headers,
-            contentLength = a.contentLength ?: b.contentLength,
-            width = a.width ?: b.width,
-            height = a.height ?: b.height,
-            posterUrl = a.posterUrl ?: b.posterUrl,
-            title = a.title ?: b.title,
-        )
 
         private val TITLE_REGEX =
             Regex("<title[^>]*>(.*?)</title>", setOf(RegexOption.IGNORE_CASE, RegexOption.DOT_MATCHES_ALL))
