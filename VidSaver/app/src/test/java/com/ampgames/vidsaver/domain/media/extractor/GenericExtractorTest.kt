@@ -5,6 +5,7 @@ import com.ampgames.vidsaver.domain.media.SniffSource
 import com.ampgames.vidsaver.domain.media.SniffedMedia
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -149,5 +150,72 @@ class GenericExtractorTest {
         assertNull(GenericExtractor.absolutize("blob:https://example.com/abc", "https://example.com/"))
         assertNull(GenericExtractor.absolutize("data:video/mp4;base64,AAA", "https://example.com/"))
         assertNull(GenericExtractor.absolutize("", "https://example.com/"))
+    }
+
+    // --- Regression: a Facebook feed offered 56 downloads for a few clips ------
+
+    private fun fbChunk(file: String, start: Long, end: Long, signature: String) =
+        "https://video-lhr8-1.xx.fbcdn.net/v/t42.1790-2/$file" +
+            "?_nc_cat=103&ccb=1-7&_nc_ohc=$signature&oh=00_AY$signature&oe=6512ABCD" +
+            "&bytestart=$start&byteend=$end"
+
+    @Test
+    fun `byte-ranged chunks of one video collapse into a single candidate`() = runTest {
+        // One clip, requested in twenty ranges the way a feed actually does it.
+        val chunks = (0 until 20).map { i ->
+            SniffedMedia(
+                url = fbChunk("clip.mp4", i * 100_000L, (i + 1) * 100_000L - 1, "sigA"),
+                pageUrl = pageUrl,
+            )
+        }
+
+        val result = extractor.extract(pageUrl, "", chunks)
+
+        assertEquals(1, result.size)
+        assertFalse("the offered url must not be a slice", result.single().url.contains("bytestart"))
+    }
+
+    @Test
+    fun `a feed of several videos yields one candidate each`() = runTest {
+        val sniffed = listOf("a", "b", "c").flatMap { name ->
+            (0 until 8).map { i ->
+                SniffedMedia(
+                    url = fbChunk("$name.mp4", i * 50_000L, (i + 1) * 50_000L - 1, "sig$name"),
+                    pageUrl = pageUrl,
+                )
+            }
+        }
+
+        val result = extractor.extract(pageUrl, "", sniffed)
+
+        assertEquals(3, result.size)
+    }
+
+    @Test
+    fun `the same video re-signed between requests counts once`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia(fbChunk("clip.mp4", 0, 99_999, "firstSignature"), pageUrl),
+                SniffedMedia(fbChunk("clip.mp4", 100_000, 199_999, "secondSignature"), pageUrl),
+            ),
+        )
+
+        assertEquals(1, result.size)
+    }
+
+    /** A wall of options is not a chooser. */
+    @Test
+    fun `the candidate list is capped`() = runTest {
+        val many = (0 until 50).map { i ->
+            SniffedMedia("https://cdn.example.com/video$i.mp4", pageUrl, height = i)
+        }
+
+        val result = extractor.extract(pageUrl, "", many)
+
+        assertEquals(GenericExtractor.MAX_CANDIDATES, result.size)
+        // The cap trims the tail, so the best quality survives.
+        assertEquals(49, result.first().height)
     }
 }

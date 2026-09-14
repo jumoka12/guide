@@ -3,6 +3,7 @@ package com.ampgames.vidsaver.domain.media.extractor
 import com.ampgames.vidsaver.core.net.Urls
 import com.ampgames.vidsaver.domain.media.FileNames
 import com.ampgames.vidsaver.domain.media.MediaCandidate
+import com.ampgames.vidsaver.domain.media.MediaIdentity
 import com.ampgames.vidsaver.domain.media.MediaTypes
 import com.ampgames.vidsaver.domain.media.SniffedMedia
 import javax.inject.Inject
@@ -39,16 +40,22 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
             sniffed: List<SniffedMedia>,
             fallbackTitle: String? = null,
         ): List<MediaCandidate> {
-            val byUrl = LinkedHashMap<String, SniffedMedia>()
-            for (media in sniffed) {
-                if (media.url.isBlank()) continue
-                if (MediaTypes.isSegmentUrl(media.url)) continue
-                if (MediaTypes.typeOf(media.url, media.mimeType) == null) continue
-                val existing = byUrl[media.url]
-                byUrl[media.url] = if (existing == null) media else merge(existing, media)
+            // Keyed by content identity, not by URL. A feed re-signs the same
+            // asset on every request and slices it into byte ranges, so literal
+            // URL comparison reports one video as dozens.
+            val byContent = LinkedHashMap<String, SniffedMedia>()
+            for (raw in sniffed) {
+                if (raw.url.isBlank()) continue
+                if (MediaTypes.isSegmentUrl(raw.url)) continue
+                if (MediaTypes.typeOf(raw.url, raw.mimeType) == null) continue
+
+                val media = raw.copy(url = MediaIdentity.canonicalUrl(raw.url))
+                val key = MediaIdentity.contentKey(media.url)
+                val existing = byContent[key]
+                byContent[key] = if (existing == null) media else merge(existing, media)
             }
 
-            return byUrl.values.map { media ->
+            return byContent.values.map { media ->
                 val type = MediaTypes.typeOf(media.url, media.mimeType)!!
                 val extension = MediaTypes.fileExtensionFor(type, media.url, media.mimeType)
                 val title = media.title?.takeIf { it.isNotBlank() } ?: fallbackTitle
@@ -76,8 +83,17 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                 compareByDescending<MediaCandidate> { it.height ?: 0 }
                     .thenByDescending { it.sizeBytes ?: 0L }
                     .thenBy { it.url },
-            )
+            ).take(MAX_CANDIDATES)
         }
+
+        /**
+         * A hard ceiling on what the sheet will offer.
+         *
+         * A social feed can legitimately hold dozens of distinct videos, and a
+         * list that long is not a chooser — it is a wall. The ordering above puts
+         * the best candidates first, so the cap trims the tail.
+         */
+        const val MAX_CANDIDATES = 12
 
         /** Keeps the richest information across two sightings of the same URL. */
         private fun merge(a: SniffedMedia, b: SniffedMedia): SniffedMedia = a.copy(

@@ -5,6 +5,7 @@ import com.ampgames.vidsaver.core.net.Urls
 import com.ampgames.vidsaver.di.ApplicationScope
 import com.ampgames.vidsaver.di.IoDispatcher
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
+import com.ampgames.vidsaver.domain.media.MediaIdentity
 import com.ampgames.vidsaver.domain.media.MediaTypes
 import com.ampgames.vidsaver.domain.media.SniffSource
 import com.ampgames.vidsaver.domain.media.SniffedMedia
@@ -77,14 +78,19 @@ class MediaSniffer @Inject constructor(
         if (url.isBlank() || !url.startsWith("http", ignoreCase = true)) return
         if (UnsupportedDomains.isUnsupported(url)) return
         if (MediaTypes.isSegmentUrl(url)) return
-        if (!seen.add(url)) return
 
-        val headers = buildHeaders(url, requestHeaders)
+        // Keyed by content identity: a feed requests the same video dozens of
+        // times in byte ranges, and probing each one would mean dozens of extra
+        // requests for a single clip.
+        val canonical = MediaIdentity.canonicalUrl(url)
+        if (!seen.add(MediaIdentity.contentKey(canonical))) return
 
-        if (MediaTypes.looksLikeMediaUrl(url)) {
+        val headers = buildHeaders(canonical, requestHeaders)
+
+        if (MediaTypes.looksLikeMediaUrl(canonical)) {
             record(
                 SniffedMedia(
-                    url = url,
+                    url = canonical,
                     pageUrl = pageUrl,
                     mimeType = null, // inferred from the URL by MediaTypes
                     headers = headers,
@@ -95,8 +101,8 @@ class MediaSniffer @Inject constructor(
             return
         }
 
-        if (shouldProbe(url)) {
-            scope.launch { probeContentType(url, headers) }
+        if (shouldProbe(canonical)) {
+            scope.launch { probeContentType(canonical, headers) }
         }
     }
 
@@ -160,11 +166,19 @@ class MediaSniffer @Inject constructor(
 
     private fun record(media: SniffedMedia) {
         if (media.pageUrl.isNotEmpty() && media.pageUrl != pageUrl) return // page moved on
+
+        val key = MediaIdentity.contentKey(media.url)
         _media.update { current ->
-            if (current.any { it.url == media.url && it.source == media.source }) {
-                current
-            } else {
-                current + media
+            val alreadyHave = current.any {
+                MediaIdentity.contentKey(it.url) == key && it.source == media.source
+            }
+            when {
+                alreadyHave -> current
+                // A page that keeps loading video must not grow this list without
+                // bound; the extractor caps what is shown, but the sniffer holds
+                // the raw observations.
+                current.size >= MAX_TRACKED_MEDIA -> current
+                else -> current + media
             }
         }
     }
@@ -203,6 +217,7 @@ class MediaSniffer @Inject constructor(
 
     private companion object {
         const val MAX_PROBES_PER_PAGE = 24
+        const val MAX_TRACKED_MEDIA = 60
 
         val FORWARDED_HEADERS = setOf("referer", "user-agent", "origin", "cookie")
 

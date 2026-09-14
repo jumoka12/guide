@@ -9,4 +9,17 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+
+    <!--
+      The launch theme. Without it the window is a blank sheet of white until
+      Compose draws, which reads as a hang rather than a launch.
+
+      androidx.core:core-splashscreen backports the Android 12 splash to API 24,
+      so the icon shows on every supported device instead of only the newest.
+    -->
+    <style name="Theme.VidSaver.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.VidSaver</item>
+    </style>
 </resources>

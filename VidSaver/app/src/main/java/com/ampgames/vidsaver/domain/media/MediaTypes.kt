@@ -54,7 +54,14 @@ object MediaTypes {
 
     fun isProgressiveUrl(url: String): Boolean = Urls.fileExtension(url) in PROGRESSIVE_EXTENSIONS
 
-    /** A segment of a stream — never offered as a download on its own. */
+    /**
+     * A stream segment container, which cannot be played or downloaded alone.
+     *
+     * Deliberately extension-only. A byte-ranged request for a normal MP4 — how
+     * Facebook and Instagram serve progressive video — is *not* this: dropping
+     * those would leave a feed with no candidates at all. Those are canonicalised
+     * back to the whole file by [MediaIdentity.canonicalUrl] instead.
+     */
     fun isSegmentUrl(url: String): Boolean = Urls.fileExtension(url) in SEGMENT_EXTENSIONS
 
     /**

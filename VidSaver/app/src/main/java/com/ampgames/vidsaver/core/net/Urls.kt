@@ -107,6 +107,47 @@ object Urls {
         return tld.length >= 2 && tld.all { it.isLetter() }
     }
 
+    /** Raw query string without the leading `?`; empty when there is none. */
+    fun query(url: String): String {
+        val afterFragment = url.trim().substringBefore('#')
+        val idx = afterFragment.indexOf('?')
+        return if (idx < 0) "" else afterFragment.substring(idx + 1)
+    }
+
+    /** `key=value` pairs of the query, in order, lowercased keys. */
+    fun queryParams(url: String): List<Pair<String, String>> =
+        query(url)
+            .split('&')
+            .filter { it.isNotEmpty() }
+            .map { pair ->
+                val idx = pair.indexOf('=')
+                if (idx < 0) {
+                    pair.lowercase() to ""
+                } else {
+                    pair.substring(0, idx).lowercase() to pair.substring(idx + 1)
+                }
+            }
+
+    /** True when the query carries any of [names]. */
+    fun hasQueryParam(url: String, names: Set<String>): Boolean =
+        queryParams(url).any { (key, _) -> key in names }
+
+    /** The URL with [drop] parameters removed, preserving the rest in order. */
+    fun withoutQueryParams(url: String, drop: Set<String>): String {
+        val trimmed = url.trim()
+        if (query(trimmed).isEmpty()) return trimmed.substringBefore('#')
+
+        val base = trimmed.substringBefore('?')
+        val kept = queryParams(trimmed)
+            .filterNot { (key, _) -> key in drop }
+            .joinToString("&") { (key, value) -> if (value.isEmpty()) key else "$key=$value" }
+
+        return if (kept.isEmpty()) base else "$base?$kept"
+    }
+
+    /** Scheme + host + path, with the query and fragment dropped entirely. */
+    fun withoutQuery(url: String): String = url.trim().substringBefore('?').substringBefore('#')
+
     /** Adds a scheme when the user typed a bare host. */
     fun withScheme(input: String): String {
         val s = input.trim()
