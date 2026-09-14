@@ -67,6 +67,46 @@
     }
   }
 
+  // The parent chain with each box's height and sizing style, so a player
+  // whose height collapsed can be traced to the ancestor that collapsed it.
+  function ancestorsOf(el) {
+    var out = [];
+    try {
+      var node = el.parentElement;
+      for (var depth = 0; node && depth < 8; depth++) {
+        var r = node.getBoundingClientRect();
+        var cs = window.getComputedStyle(node);
+        var cls = (typeof node.className === 'string' ? node.className : '').split(/\s+/)[0] || '';
+        out.push(node.tagName.toLowerCase() + (cls ? '.' + cls.substring(0, 24) : '') +
+          ' ' + Math.round(r.width) + 'x' + Math.round(r.height) +
+          ' h=' + cs.height + ' pos=' + cs.position + ' disp=' + cs.display);
+        node = node.parentElement;
+      }
+    } catch (e) {
+      out.push('?');
+    }
+    return out.join(' < ');
+  }
+
+  // A player that measured itself before it had a size keeps that size until
+  // something tells it to look again. A resize event is how a browser tells it.
+  var nudged = [];
+  function nudgeIfCollapsed(video) {
+    try {
+      var r = video.getBoundingClientRect();
+      if (r.height > 0 || video.readyState < 1) return;
+      if (nudged.indexOf(video) >= 0) return;
+      nudged.push(video);
+      window.dispatchEvent(new Event('resize'));
+      if (window.visualViewport) {
+        try { window.visualViewport.dispatchEvent(new Event('resize')); } catch (e) { /* not dispatchable */ }
+      }
+      scheduleScan();
+    } catch (e) {
+      /* nothing to do */
+    }
+  }
+
   // How much of the element is inside the viewport, 0..1.
   function visibleFraction(el) {
     try {
@@ -131,7 +171,10 @@
           ' rs=' + video.readyState + ' ns=' + video.networkState +
           ' err=' + (video.error ? video.error.code : 0) +
           ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
-          ' vis=' + visibleFraction(video) + ' ' + boxOf(video));
+          ' vis=' + visibleFraction(video) + ' ' + boxOf(video) +
+          ' style="' + (video.getAttribute('style') || '').substring(0, 80) + '"' +
+          ' up=[' + ancestorsOf(video) + ']');
+        nudgeIfCollapsed(video);
       }
       var shared = {
         poster: video.getAttribute('poster') || null,

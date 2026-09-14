@@ -99,10 +99,13 @@ class MediaSniffer @Inject constructor(
      * Called from the WebView's network thread for every subresource. Must be
      * fast and must not block: the actual inspection happens on a coroutine.
      */
-    fun onResourceRequested(url: String, requestHeaders: Map<String, String>) {
+    fun onResourceRequested(url: String, requestHeaders: Map<String, String>, method: String = "GET") {
         if (url.isBlank() || !url.startsWith("http", ignoreCase = true)) return
         if (UnsupportedDomains.isUnsupported(url)) return
         if (MediaTypes.isSegmentUrl(url)) return
+        // Video is fetched with GET; a POST is an API call, never a file.
+        if (!method.equals("GET", ignoreCase = true)) return
+        if (isApiCall(url, requestHeaders)) return
 
         // Keyed by content identity: a feed requests the same video dozens of
         // times in byte ranges, and probing each one would mean dozens of extra
@@ -111,7 +114,13 @@ class MediaSniffer @Inject constructor(
         if (!seen.add(MediaIdentity.contentKey(canonical))) return
 
         val headers = buildHeaders(canonical, requestHeaders)
-        val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical)
+        // A byte-range request is a media request whatever the URL looks like:
+        // players fetch video in ranges and nothing else does. Sites that
+        // serve video from extension-less URLs (TikTok, Instagram) are only
+        // ever caught this way.
+        val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical) ||
+            requestHeaders.keys.any { it.equals("Range", ignoreCase = true) } ||
+            hintsAtVideo(canonical)
 
         if (looksLikeMedia) {
             // Offer it straight away; the probe below only adds the size.
@@ -267,6 +276,25 @@ class MediaSniffer @Inject constructor(
         }
     }
 
+    /**
+     * Requests that are plainly a site's API, not a file: they used to spend
+     * the probe budget before the page's first video request arrived, which
+     * is why a feed sometimes showed nothing to download.
+     */
+    private fun isApiCall(url: String, requestHeaders: Map<String, String>): Boolean {
+        val accept = requestHeaders.entries.firstOrNull { it.key.equals("Accept", ignoreCase = true) }?.value
+        if (accept != null && accept.startsWith("application/json", ignoreCase = true)) return true
+        val path = "/" + url.substringAfter("://").substringAfter('/', "").substringBefore('?').lowercase()
+        return API_PATH_MARKERS.any { path.contains(it) }
+    }
+
+    /** Extension-less URLs that a site still labels as video in the query or path. */
+    private fun hintsAtVideo(url: String): Boolean {
+        val lower = url.lowercase()
+        return lower.contains("mime_type=video") || lower.contains("/video/tos/") ||
+            lower.contains("/video/") && lower.contains("&br=")
+    }
+
     /** True when a CODECS attribute names no video codec at all. */
     private fun isAudioCodecOnly(codecs: String?): Boolean {
         val c = codecs?.lowercase() ?: return false
@@ -335,9 +363,15 @@ class MediaSniffer @Inject constructor(
         contentRange?.substringAfterLast('/')?.trim()?.toLongOrNull()?.takeIf { it > 0 }
 
     private companion object {
-        const val MAX_PROBES_PER_PAGE = 24
+        const val MAX_PROBES_PER_PAGE = 40
         const val MAX_MEDIA_PROBES_PER_PAGE = 40
         const val MAX_PLAYLIST_BYTES = 512L * 1024
+
+        val API_PATH_MARKERS = listOf(
+            "/api/", "/graphql", "/gql", "/ajax/", "/log/", "/logs/", "/collect", "/report",
+            "/analytics", "/track", "/pixel", "/beacon", "/ping", "/telemetry", "/metrics",
+            "/monitor", "/stats", "/tr/", "/rtb/", "/ads/", "/sdk/", "/webmssdk", "/service/",
+        )
 
         val VIDEO_CODEC_PREFIXES = listOf("avc1", "avc3", "hev1", "hvc1", "vp09", "vp8", "vp9", "av01", "dvh1", "dvhe")
         const val MAX_TRACKED_MEDIA = 60

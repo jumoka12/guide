@@ -131,6 +131,37 @@ class MediaSnifferTest {
     }
 
     @Test
+    fun `an extension-less url fetched in byte ranges is treated as media`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(206)
+                .setHeader("Content-Type", "video/mp4")
+                .setHeader("Content-Range", "bytes 0-0/9999999")
+                .setBody("x"),
+        )
+        // The shape TikTok uses: no extension, a signed query, fetched in ranges.
+        val url = server.url("/video/tos/useast2a/abc123/?a=1&mime_type=video_mp4").toString()
+
+        sniffer.onResourceRequested(url, mapOf("Range" to "bytes=0-1048575"), "GET")
+
+        // Offered at once without a size, then the probe fills the size in.
+        val found = await { list -> list.any { it.contentLength != null } }.single()
+        assertEquals(9_999_999L, found.contentLength)
+        assertEquals("video/mp4", found.mimeType)
+    }
+
+    @Test
+    fun `api calls are never probed and never spend the budget`() = runBlocking {
+        sniffer.onResourceRequested(server.url("/api/recommend/item_list/?count=8").toString(), emptyMap(), "GET")
+        sniffer.onResourceRequested(server.url("/graphql/query").toString(), emptyMap(), "POST")
+        sniffer.onResourceRequested(server.url("/things?id=1").toString(), mapOf("Accept" to "application/json"), "GET")
+        sniffer.onResourceRequested(server.url("/upload").toString(), emptyMap(), "POST")
+
+        Thread.sleep(300)
+        assertEquals(0, server.requestCount)
+    }
+
+    @Test
     fun `static assets are never probed`() = runBlocking {
         sniffer.onResourceRequested(server.url("/app.js").toString(), emptyMap())
         sniffer.onResourceRequested(server.url("/style.css").toString(), emptyMap())

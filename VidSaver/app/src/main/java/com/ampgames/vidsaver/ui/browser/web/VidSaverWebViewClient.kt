@@ -85,7 +85,7 @@ class VidSaverWebViewClient(
 
         if (request.isForMainFrame) return null
 
-        mediaSniffer.onResourceRequested(url, request.requestHeaders.orEmpty())
+        mediaSniffer.onResourceRequested(url, request.requestHeaders.orEmpty(), request.method)
         return null // let the WebView fetch it as normal
     }
 
