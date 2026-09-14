@@ -106,6 +106,14 @@ class MediaSniffer @Inject constructor(
         // Video is fetched with GET; a POST is an API call, never a file.
         if (!method.equals("GET", ignoreCase = true)) return
         if (isApiCall(url, requestHeaders)) return
+        // The browser says what it is fetching. An image, script, style sheet
+        // or document is never a video, and must not be re-requested by the
+        // probe: a second hit on a signed image URL is a way to make the
+        // page's own copy fail.
+        val destination = header(requestHeaders, "Sec-Fetch-Dest")?.lowercase()
+        if (destination != null && destination in NON_MEDIA_DESTINATIONS) return
+        val accept = header(requestHeaders, "Accept")?.lowercase()
+        if (accept != null && (accept.startsWith("image/") || accept.startsWith("text/"))) return
 
         // Keyed by content identity: a feed requests the same video dozens of
         // times in byte ranges, and probing each one would mean dozens of extra
@@ -120,6 +128,7 @@ class MediaSniffer @Inject constructor(
         // ever caught this way.
         val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical) ||
             requestHeaders.keys.any { it.equals("Range", ignoreCase = true) } ||
+            destination == "video" || destination == "audio" ||
             hintsAtVideo(canonical)
 
         if (looksLikeMedia) {
@@ -281,8 +290,11 @@ class MediaSniffer @Inject constructor(
      * the probe budget before the page's first video request arrived, which
      * is why a feed sometimes showed nothing to download.
      */
+    private fun header(headers: Map<String, String>, name: String): String? =
+        headers.entries.firstOrNull { it.key.equals(name, ignoreCase = true) }?.value
+
     private fun isApiCall(url: String, requestHeaders: Map<String, String>): Boolean {
-        val accept = requestHeaders.entries.firstOrNull { it.key.equals("Accept", ignoreCase = true) }?.value
+        val accept = header(requestHeaders, "Accept")
         if (accept != null && accept.startsWith("application/json", ignoreCase = true)) return true
         val path = "/" + url.substringAfter("://").substringAfter('/', "").substringBefore('?').lowercase()
         return API_PATH_MARKERS.any { path.contains(it) }
@@ -366,6 +378,12 @@ class MediaSniffer @Inject constructor(
         const val MAX_PROBES_PER_PAGE = 40
         const val MAX_MEDIA_PROBES_PER_PAGE = 40
         const val MAX_PLAYLIST_BYTES = 512L * 1024
+
+        val NON_MEDIA_DESTINATIONS = setOf(
+            "image", "script", "style", "font", "document", "iframe", "frame", "manifest",
+            "report", "worker", "sharedworker", "serviceworker", "paintworklet", "audioworklet",
+            "track", "xslt", "embed", "object",
+        )
 
         val API_PATH_MARKERS = listOf(
             "/api/", "/graphql", "/gql", "/ajax/", "/log/", "/logs/", "/collect", "/report",

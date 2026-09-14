@@ -92,6 +92,42 @@
     return out.join(' < ');
   }
 
+  // The children of the highest zero-height ancestor whose own parent has
+  // height: whichever in-flow child was supposed to give it height is here,
+  // and if that child is an image its load state says whether it ever arrived.
+  function collapsedChildren(el) {
+    try {
+      var node = el.parentElement;
+      var top = null;
+      while (node && node.getBoundingClientRect().height === 0) {
+        top = node;
+        node = node.parentElement;
+      }
+      if (!top) return '';
+      var out = [];
+      var kids = top.children;
+      for (var i = 0; i < kids.length && i < 10; i++) {
+        var k = kids[i];
+        var r = k.getBoundingClientRect();
+        var cs = window.getComputedStyle(k);
+        var cls = (typeof k.className === 'string' ? k.className : '').split(/\s+/)[0] || '';
+        var line = k.tagName.toLowerCase() + (cls ? '.' + cls.substring(0, 24) : '') +
+          ' ' + Math.round(r.width) + 'x' + Math.round(r.height) +
+          ' h=' + cs.height + ' pos=' + cs.position + ' disp=' + cs.display;
+        if (k.tagName === 'IMG') {
+          line += ' img:complete=' + k.complete + ' natural=' + k.naturalWidth + 'x' + k.naturalHeight +
+            ' src=' + srcScheme(k.currentSrc || k.getAttribute('src')) +
+            ':' + ((k.currentSrc || k.getAttribute('src') || '').split('/')[2] || '');
+        }
+        if (k.tagName === 'CANVAS') line += ' canvas=' + k.width + 'x' + k.height;
+        out.push(line);
+      }
+      return out.join(' | ');
+    } catch (e) {
+      return '?';
+    }
+  }
+
   // A player that measured itself before it had a size keeps that size until
   // something tells it to look again. A resize event is how a browser tells it.
   var nudged = [];
@@ -177,7 +213,8 @@
           ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
           ' vis=' + visibleFraction(video) + ' ' + boxOf(video) +
           ' style="' + (video.getAttribute('style') || '').substring(0, 80) + '"' +
-          ' up=[' + ancestorsOf(video) + ']');
+          ' up=[' + ancestorsOf(video) + ']' +
+          ' kids=[' + collapsedChildren(video) + ']');
         nudgeIfCollapsed(video);
       }
       var shared = {

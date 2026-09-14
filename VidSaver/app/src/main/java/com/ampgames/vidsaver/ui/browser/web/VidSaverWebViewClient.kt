@@ -91,6 +91,7 @@ class VidSaverWebViewClient(
 
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
         super.onPageStarted(view, url, favicon)
+        loggedFailures = 0
         mediaSniffer.onNavigationStarted(url)
         callbacks.onPageStarted(url)
         callbacks.onProgressRelevantStateChanged(view.canGoBack(), view.canGoForward())
@@ -130,11 +131,30 @@ class VidSaverWebViewClient(
         val url = request.url.toString()
         if (request.isForMainFrame) {
             Timber.w("Main frame failed: %s (%d %s)", url, error.errorCode, error.description)
-        } else if (MediaTypes.looksLikeMediaUrl(url)) {
-            // A video the page asked for and could not get is the whole story
-            // of a black player; it has to be in the log.
-            Timber.w("Media request failed: %s (%d %s)", url, error.errorCode, error.description)
+        } else if (worthLogging(request)) {
+            // A video or poster the page asked for and could not get is the
+            // whole story of a grey player; it has to be in the log.
+            Timber.w(
+                "%s request failed: %s (%d %s)",
+                request.requestHeaders?.get("Sec-Fetch-Dest") ?: "sub",
+                url.take(160),
+                error.errorCode,
+                error.description,
+            )
         }
+    }
+
+    /** Media and images, capped so one broken CDN cannot flood the log. */
+    private var loggedFailures = 0
+
+    private fun worthLogging(request: WebResourceRequest): Boolean {
+        if (loggedFailures >= MAX_LOGGED_FAILURES) return false
+        val destination = request.requestHeaders?.get("Sec-Fetch-Dest")?.lowercase()
+        val url = request.url.toString()
+        val interesting = destination == "image" || destination == "video" || destination == "audio" ||
+            MediaTypes.looksLikeMediaUrl(url) || request.requestHeaders?.containsKey("Range") == true
+        if (interesting) loggedFailures++
+        return interesting
     }
 
     override fun onReceivedHttpError(
@@ -146,8 +166,13 @@ class VidSaverWebViewClient(
         val url = request.url.toString()
         if (request.isForMainFrame) {
             Timber.w("Main frame HTTP %d for %s", errorResponse.statusCode, url)
-        } else if (MediaTypes.looksLikeMediaUrl(url)) {
-            Timber.w("Media request HTTP %d for %s", errorResponse.statusCode, url)
+        } else if (worthLogging(request)) {
+            Timber.w(
+                "%s request HTTP %d for %s",
+                request.requestHeaders?.get("Sec-Fetch-Dest") ?: "sub",
+                errorResponse.statusCode,
+                url.take(160),
+            )
         }
     }
 
@@ -163,6 +188,8 @@ class VidSaverWebViewClient(
     }
 
     private companion object {
+        const val MAX_LOGGED_FAILURES = 40
+
         /**
          * An empty 200 rather than an error: pages handle a zero-length resource
          * far more gracefully than a failed request, which some sites retry in a
