@@ -237,8 +237,13 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun onDomMediaFound(payload: DomMediaPayload) {
-        mediaSniffer.onDomMediaFound(payload.media)
+        lastDomDebug = payload.debug.map { it.take(160) }
+        if (payload.media.isNotEmpty()) mediaSniffer.onDomMediaFound(payload.media)
     }
+
+    /** The page script's last view of every `<video>` element, for the debug log. */
+    @Volatile
+    private var lastDomDebug: List<String> = emptyList()
 
     fun onUnsupportedDomainBlocked(url: String) {
         Timber.i("Blocked unsupported domain: %s", Urls.host(url))
@@ -478,6 +483,10 @@ class BrowserViewModel @Inject constructor(
             appendLine("WebView: $webViewInfo")
             appendLine("Ad blocking: ${state.adBlockEnabled} (site allowlisted: ${state.siteAllowlisted}), desktop: ${state.desktopMode}")
             appendLine()
+            appendLine("Video elements the page script sees (${lastDomDebug.size}):")
+            if (lastDomDebug.isEmpty()) appendLine("  (none reported — script not running, or no <video> in the document)")
+            lastDomDebug.forEach { appendLine("  $it") }
+            appendLine()
             appendLine("Sniffed media (${mediaSniffer.media.value.size}):")
             appendLine(mediaSniffer.describe())
             appendLine()
@@ -541,6 +550,10 @@ class BrowserViewModel @Inject constructor(
             <p id="s">starting…</p>
             <p>If frames show above, this browser can play video and the problem is the site.
             If this stays black, the problem is the app.</p>
+            <h3>Streaming self-test (Media Source Extensions)</h3>
+            <p>TikTok, Facebook and Dailymotion feed video through this API rather than a plain file.</p>
+            <video id="m" controls muted playsinline></video>
+            <p id="ms">starting…</p>
             <script>
               var v=document.querySelector('video'),s=document.getElementById('s');
               setInterval(function(){
@@ -548,6 +561,33 @@ class BrowserViewModel @Inject constructor(
                   ' time='+v.currentTime.toFixed(1)+' size='+v.videoWidth+'x'+v.videoHeight+
                   (v.error?' error='+v.error.code:'')+(v.paused?' paused':' playing');
               },500);
+
+              // A DASH-IF reference clip: one init segment and two media segments.
+              var base='https://dash.akamaized.net/akamai/bbb_30fps/bbb_30fps_640x360_1000k/bbb_30fps_640x360_1000k_';
+              var mime='video/mp4; codecs="avc1.64001e"';
+              var m=document.getElementById('m'),ms=document.getElementById('ms');
+              var failed=false;
+              function fail(t){failed=true;ms.textContent=t;}
+              if(!window.MediaSource){fail('MediaSource API missing');}
+              else if(!MediaSource.isTypeSupported(mime)){fail('MediaSource says '+mime+' unsupported');}
+              else{
+                var src=new MediaSource();m.src=URL.createObjectURL(src);
+                src.addEventListener('sourceopen',function(){
+                  var sb=src.addSourceBuffer(mime);var i=0;var parts=['0.m4v','1.m4v','2.m4v'];
+                  function next(){
+                    if(i>=parts.length){try{src.endOfStream();}catch(e){}m.play().catch(function(e){fail('play refused: '+e);});return;}
+                    fetch(base+parts[i++]).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.arrayBuffer();})
+                      .then(function(b){sb.addEventListener('updateend',next,{once:true});sb.appendBuffer(b);})
+                      .catch(function(e){fail('segment fetch failed: '+e);});
+                  }
+                  next();
+                });
+                setInterval(function(){
+                  if(failed)return;
+                  ms.textContent='MSE readyState='+m.readyState+' time='+m.currentTime.toFixed(1)+' size='+m.videoWidth+'x'+m.videoHeight+
+                    (m.error?' error='+m.error.code:'')+(m.paused?' paused':' playing');
+                },500);
+              }
             </script></body></html>
         """.trimIndent()
     }

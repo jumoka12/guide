@@ -42,4 +42,9 @@ data class DomMediaPayload(
     @SerialName("pageUrl") val pageUrl: String = "",
     val title: String? = null,
     val media: List<DomMediaReport> = emptyList(),
+    /**
+     * One line per `<video>` on the page, whatever its source — including the
+     * `blob:` ones that can never be candidates. Debug log only.
+     */
+    val debug: List<String> = emptyList(),
 )

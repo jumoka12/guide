@@ -32,7 +32,7 @@ object Diagnostics {
      * (Compose, OkHttp internals, the system) is noise here.
      */
     private val INTERESTING = Regex(
-        "WebConsole|MediaSniffer|VidSaverWebViewClient|BrowserViewModel|BrowserWebView|" +
+        "WebConsole|MediaSniffer|VideoSnifferBridge|WebViewScripts|VidSaverWebViewClient|BrowserViewModel|BrowserWebView|" +
             "DownloadEngine|DownloadService|HlsDownload|DirectFile|MediaStorePublisher|" +
             "AndroidRuntime|chromium|cr_",
     )

@@ -100,10 +100,21 @@
     out.push(entry);
   }
 
-  function collectVideoElements(out) {
+  function collectVideoElements(out, debug) {
     var videos = document.getElementsByTagName('video');
     for (var i = 0; i < videos.length; i++) {
       var video = videos[i];
+      if (debug.length < 20) {
+        // Every element, blob-sourced ones included: a page whose videos all
+        // live in blob: URLs still has to be explainable from the log.
+        debug.push(srcScheme(video.currentSrc || video.getAttribute('src')) +
+          (video === lastActive ? ' active' : '') +
+          (!video.paused && !video.ended ? ' playing' : ' paused') +
+          ' rs=' + video.readyState + ' ns=' + video.networkState +
+          ' err=' + (video.error ? video.error.code : 0) +
+          ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
+          ' vis=' + visibleFraction(video));
+      }
       var shared = {
         poster: video.getAttribute('poster') || null,
         width: video.videoWidth || null,
@@ -118,7 +129,7 @@
         // error 4 = format not supported.
         state: 'rs=' + video.readyState + ' ns=' + video.networkState +
           ' err=' + (video.error ? video.error.code : 0) +
-          ' t=' + (video.currentTime || 0).toFixed(1) +
+          ' t=' + (Math.floor((video.currentTime || 0) / 10) * 10) +
           ' ' + (video.videoWidth || 0) + 'x' + (video.videoHeight || 0) +
           ' src=' + srcScheme(video.currentSrc || video.getAttribute('src'))
       };
@@ -169,19 +180,21 @@
 
   function scan() {
     var found = [];
+    var debug = [];
     try {
-      collectVideoElements(found);
+      collectVideoElements(found, debug);
       collectMetaTags(found);
     } catch (e) {
       // A page that breaks our scan must not break the page.
       return;
     }
-    if (!found.length) return;
+    if (!found.length && !debug.length) return;
 
     var payload = JSON.stringify({
       pageUrl: window.location.href,
       title: pageTitle(),
-      media: found
+      media: found,
+      debug: debug
     });
 
     // Only post when something actually changed.

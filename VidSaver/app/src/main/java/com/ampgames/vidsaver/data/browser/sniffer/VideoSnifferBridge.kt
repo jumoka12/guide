@@ -33,8 +33,8 @@ class VideoSnifferBridge(
                 Timber.w(error, "Malformed sniffer payload")
                 return
             }
-        if (payload.media.isEmpty()) return
-        onMedia(payload.copy(media = payload.media.take(MAX_REPORTS)))
+        if (payload.media.isEmpty() && payload.debug.isEmpty()) return
+        onMedia(payload.copy(media = payload.media.take(MAX_REPORTS), debug = payload.debug.take(20)))
     }
 
     companion object {

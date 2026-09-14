@@ -87,6 +87,14 @@ fun BrowserWebView(
                         override fun onProgressChanged(view: WebView, newProgress: Int) {
                             onProgressChanged(newProgress)
                             onNavigationStateChanged(view.canGoBack(), view.canGoForward())
+                            // Attached and laid out by the time a page finishes, so
+                            // this answers truthfully; the first composition did not.
+                            if (newProgress == 100) {
+                                onWebViewInfo(
+                                    "hwAccelerated=${view.isHardwareAccelerated} layerType=${view.layerType} " +
+                                        "size=${view.width}x${view.height} ua=${view.settings.userAgentString}",
+                                )
+                            }
                         }
 
                         override fun onReceivedTitle(view: WebView, title: String?) {
@@ -149,12 +157,6 @@ fun BrowserWebView(
             update = { webView ->
                 holder.webView = webView
                 WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
-                // Attached by now, so this answers truthfully. A WebView that is
-                // not hardware accelerated paints pages but never a video frame.
-                onWebViewInfo(
-                    "hwAccelerated=${webView.isHardwareAccelerated} layerType=${webView.layerType} " +
-                        "size=${webView.width}x${webView.height} ua=${webView.settings.userAgentString}",
-                )
             },
             onRelease = { webView ->
                 fullscreen.hide()

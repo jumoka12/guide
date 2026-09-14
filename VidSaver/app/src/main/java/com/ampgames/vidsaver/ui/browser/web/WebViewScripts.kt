@@ -33,5 +33,13 @@ object WebViewScripts {
             cached.get()
         } ?: return
         webView.evaluateJavascript(script, null)
+        // Confirms the script took: a page that rejects it, or one whose
+        // document was replaced after injection, leaves the flag unset.
+        webView.evaluateJavascript(INSTALLED_CHECK) { result ->
+            Timber.i("Sniffer installed on %s: %s", webView.url, result)
+        }
     }
+
+    private const val INSTALLED_CHECK =
+        "(function(){try{return window.__vidSaverSnifferInstalled===true}catch(e){return 'error: '+e}})()"
 }
