@@ -59,6 +59,10 @@
       return 'rect=' + Math.round(r.width) + 'x' + Math.round(r.height) +
         '@' + Math.round(r.left) + ',' + Math.round(r.top) +
         ' vp=' + window.innerWidth + 'x' + window.innerHeight +
+        ' doc=' + document.documentElement.clientWidth + 'x' + document.documentElement.clientHeight +
+        ' body=' + (document.body ? document.body.clientHeight : -1) +
+        ' screen=' + window.screen.width + 'x' + window.screen.height + '/' + window.screen.availHeight +
+        ' outer=' + window.outerHeight + ' dpr=' + window.devicePixelRatio +
         (vp ? ' scale=' + (Math.round(vp.scale * 100) / 100) : '') +
         ' disp=' + cs.display + ' op=' + cs.opacity + ' visb=' + cs.visibility +
         ' pos=' + cs.position + ' z=' + cs.zIndex;

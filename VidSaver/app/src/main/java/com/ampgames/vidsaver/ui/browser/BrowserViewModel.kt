@@ -237,7 +237,7 @@ class BrowserViewModel @Inject constructor(
     }
 
     fun onDomMediaFound(payload: DomMediaPayload) {
-        lastDomDebug = payload.debug.map { it.take(160) }
+        lastDomDebug = payload.debug.map { it.take(1_000) }
         if (payload.media.isNotEmpty()) mediaSniffer.onDomMediaFound(payload.media)
     }
 
