@@ -79,7 +79,7 @@ class GenericExtractorTest {
             pageUrl,
             "",
             listOf(
-                SniffedMedia(url, pageUrl, source = SniffSource.NETWORK, contentLength = 5_000L),
+                SniffedMedia(url, pageUrl, source = SniffSource.NETWORK, contentLength = 5_000_000L),
                 SniffedMedia(
                     url = url,
                     pageUrl = pageUrl,
@@ -93,7 +93,7 @@ class GenericExtractorTest {
 
         assertEquals(1, result.size)
         val candidate = result.single()
-        assertEquals(5_000L, candidate.sizeBytes)
+        assertEquals(5_000_000L, candidate.sizeBytes)
         assertEquals(720, candidate.height)
         assertEquals("https://cdn.example.com/poster.jpg", candidate.thumbnailUrl)
         assertEquals("The clip 720p.mp4", candidate.suggestedFileName)
@@ -241,14 +241,14 @@ class GenericExtractorTest {
             pageUrl,
             "",
             listOf(
-                SniffedMedia(url, pageUrl, source = SniffSource.NETWORK, contentLength = 9_000L),
+                SniffedMedia(url, pageUrl, source = SniffSource.NETWORK, contentLength = 9_000_000L),
                 SniffedMedia(url, pageUrl, source = SniffSource.DOM, title = "Movie"),
             ),
         )
 
         assertEquals(1, result.size)
         assertTrue(result.single().isPrimary)
-        assertEquals(9_000L, result.single().sizeBytes)
+        assertEquals(9_000_000L, result.single().sizeBytes)
     }
 
     @Test
@@ -336,6 +336,44 @@ class GenericExtractorTest {
         // A network sighting knows nothing about playback and must not erase it.
         val network = SniffedMedia("u", pageUrl, source = SniffSource.NETWORK, detectedAt = 3L, contentLength = 5L)
         assertTrue(first.enrichedWith(network).activity.isPlaying)
+    }
+
+    // --- Regression: Dailymotion offered six "HLS 1.6 KB" chips and a 1.4 KB mp4 --
+
+    @Test
+    fun `a master playlist gives way to its variants`() = runTest {
+        val master = "https://cdn.example.com/video/abc.m3u8?sec=1"
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia(master, pageUrl, mimeType = "application/vnd.apple.mpegurl"),
+                SniffedMedia("https://cdn.example.com/video/abc/1080.m3u8", pageUrl, height = 1080, hlsVariantOf = master),
+                SniffedMedia("https://cdn.example.com/video/abc/480.m3u8", pageUrl, height = 480, hlsVariantOf = master),
+                SniffedMedia("https://cdn.example.com/video/abc/audio.m3u8", pageUrl, hlsVariantOf = master, audioOnly = true),
+            ),
+        )
+
+        assertEquals(listOf(1080, 480), result.map { it.height })
+        assertFalse("the master is a menu, not a download", result.any { it.url == master })
+        assertTrue(result.all { it.hlsVariantOf == master })
+    }
+
+    @Test
+    fun `a playlist never shows a byte size and a tiny mp4 is not a video`() = runTest {
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://cdn.example.com/init.mp4", pageUrl, contentLength = 1_400L),
+                SniffedMedia("https://cdn.example.com/full.mp4", pageUrl, contentLength = 9_000_000L),
+                SniffedMedia("https://cdn.example.com/list.m3u8", pageUrl, contentLength = null),
+            ),
+        )
+
+        assertEquals(2, result.size)
+        assertFalse(result.any { it.url.endsWith("init.mp4") })
+        assertNull(result.first { it.type == MediaType.HLS }.sizeBytes)
     }
 
     /** A wall of options is not a chooser. */

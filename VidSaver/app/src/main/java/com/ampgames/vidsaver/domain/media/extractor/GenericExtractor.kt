@@ -4,6 +4,7 @@ import com.ampgames.vidsaver.core.net.Urls
 import com.ampgames.vidsaver.domain.media.FileNames
 import com.ampgames.vidsaver.domain.media.MediaCandidate
 import com.ampgames.vidsaver.domain.media.MediaIdentity
+import com.ampgames.vidsaver.domain.media.MediaType
 import com.ampgames.vidsaver.domain.media.MediaTypes
 import com.ampgames.vidsaver.domain.media.SniffedMedia
 import javax.inject.Inject
@@ -57,7 +58,22 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
 
             val cleanFallback = FileNames.cleanTitle(fallbackTitle, pageUrl)
 
-            return byContent.values.map { media ->
+            // A master playlist whose variants are known is a menu, not a file:
+            // the variants take its place, one per quality.
+            val mastersWithVariants = byContent.values
+                .mapNotNull { it.hlsVariantOf?.let { master -> MediaIdentity.contentKey(master) } }
+                .toSet()
+
+            return byContent.entries.asSequence().filter { (key, media) ->
+                when {
+                    media.audioOnly -> false
+                    key in mastersWithVariants -> false
+                    // A "video" of a few kilobytes is an init segment or a
+                    // probe response, never something worth saving.
+                    isTinyFile(media) -> false
+                    else -> true
+                }
+            }.map { (_, media) ->
                 val type = MediaTypes.typeOf(media.url, media.mimeType)!!
                 val extension = MediaTypes.fileExtensionFor(type, media.url, media.mimeType)
                 val title = FileNames.cleanTitle(media.title, pageUrl) ?: cleanFallback
@@ -82,8 +98,22 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                     source = media.source,
                     activityScore = media.activity.score,
                     detectedAt = media.detectedAt,
+                    hlsVariantOf = media.hlsVariantOf,
                 )
-            }.sortedWith(ranking()).take(MAX_CANDIDATES)
+            }.sortedWith(ranking()).take(MAX_CANDIDATES).toList()
+        }
+
+        /**
+         * Below this a progressive "video" is an init segment, a redirect body
+         * or an error page. HLS playlists are exempt: their byte size is the
+         * size of a text file and says nothing about the stream.
+         */
+        const val MIN_VIDEO_BYTES = 100_000L
+
+        private fun isTinyFile(media: SniffedMedia): Boolean {
+            val size = media.contentLength ?: return false
+            if (MediaTypes.typeOf(media.url, media.mimeType) == MediaType.HLS) return false
+            return size in 1 until MIN_VIDEO_BYTES
         }
 
         /**

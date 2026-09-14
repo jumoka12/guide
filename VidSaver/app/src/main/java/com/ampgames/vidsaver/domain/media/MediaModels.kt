@@ -43,6 +43,13 @@ data class SniffedMedia(
      * sightings carry it; for the network the page is a black box.
      */
     val activity: Activity = Activity.NONE,
+    /**
+     * For an HLS variant playlist, the master playlist it was listed in. The
+     * sheet offers the variants (each a quality) and hides the master.
+     */
+    val hlsVariantOf: String? = null,
+    /** An audio-only rendition; never offered as a video download. */
+    val audioOnly: Boolean = false,
 ) {
     /**
      * Combines two sightings of the same content, keeping whatever either one
@@ -58,6 +65,8 @@ data class SniffedMedia(
         height = height ?: other.height,
         posterUrl = posterUrl ?: other.posterUrl,
         title = title ?: other.title,
+        hlsVariantOf = hlsVariantOf ?: other.hlsVariantOf,
+        audioOnly = audioOnly || other.audioOnly,
         source = if (source == SniffSource.DOM || other.source == SniffSource.DOM) {
             SniffSource.DOM
         } else {
@@ -132,6 +141,8 @@ data class MediaCandidate(
     val activityScore: Double = 0.0,
     /** When the sniffer last saw this file requested or reported. */
     val detectedAt: Long = 0L,
+    /** For an HLS variant, the master playlist it came from. */
+    val hlsVariantOf: String? = null,
 ) {
     /** Stable identity for de-duplication and list keys. */
     val id: String get() = url

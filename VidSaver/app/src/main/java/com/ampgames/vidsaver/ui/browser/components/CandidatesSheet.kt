@@ -202,7 +202,11 @@ private fun QualityChip(
         )
         Text(
             text = candidate.sizeBytes?.let { ByteFormat.size(it) }
-                ?: stringResource(R.string.candidates_size_unknown),
+                ?: if (candidate.type == MediaType.HLS) {
+                    stringResource(R.string.candidates_stream)
+                } else {
+                    stringResource(R.string.candidates_size_unknown)
+                },
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,

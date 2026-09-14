@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ampgames.vidsaver.R
+import com.ampgames.vidsaver.core.logging.Diagnostics
 import com.ampgames.vidsaver.ui.browser.components.BookmarksSheet
 import com.ampgames.vidsaver.ui.browser.components.BrowserHome
 import com.ampgames.vidsaver.ui.browser.components.BrowserTopBar
@@ -36,6 +38,7 @@ import com.ampgames.vidsaver.ui.browser.components.CandidatesSheet
 import com.ampgames.vidsaver.ui.browser.components.TabsSheet
 import com.ampgames.vidsaver.ui.browser.web.BrowserWebView
 import com.ampgames.vidsaver.ui.permissions.rememberDownloadPermissions
+import kotlinx.coroutines.launch
 
 const val BROWSER_SCREEN_TEST_TAG = "browser_screen"
 const val DOWNLOAD_FAB_TEST_TAG = "download_fab"
@@ -65,6 +68,16 @@ fun BrowserScreen(
         }
     }
 
+    // The one honest way to debug a site that misbehaves on a phone I cannot
+    // see: the app's own recent log, handed to the share sheet.
+    val scope = rememberCoroutineScope()
+    val shareLog: () -> Unit = {
+        scope.launch {
+            val text = Diagnostics.collect(context)
+            runCatching { context.startActivity(Diagnostics.shareIntent(text)) }
+        }
+    }
+
     // System back walks page history, then returns to the start page. Only
     // once there does it leave the screen.
     BackHandler(enabled = !state.showHome) {
@@ -89,6 +102,7 @@ fun BrowserScreen(
                 onToggleSiteAllowlist = viewModel::onToggleSiteAllowlist,
                 onToggleDesktopMode = viewModel::onToggleDesktopMode,
                 onShowFound = viewModel::onCandidatesClicked,
+                onShareLog = shareLog,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -139,6 +153,7 @@ fun BrowserScreen(
                     onToggleAdBlock = viewModel::onToggleAdBlock,
                     onToggleSiteAllowlist = viewModel::onToggleSiteAllowlist,
                     onToggleDesktopMode = viewModel::onToggleDesktopMode,
+                    onShareLog = shareLog,
                     modifier = Modifier.fillMaxSize(),
                 )
             }

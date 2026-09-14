@@ -10,6 +10,7 @@ import com.ampgames.vidsaver.domain.media.MediaIdentity
 import com.ampgames.vidsaver.domain.media.MediaTypes
 import com.ampgames.vidsaver.domain.media.SniffSource
 import com.ampgames.vidsaver.domain.media.SniffedMedia
+import com.ampgames.vidsaver.domain.media.hls.M3u8Parser
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
@@ -173,9 +174,16 @@ class MediaSniffer @Inject constructor(
 
                 client.newCall(request).execute().use { response ->
                     val contentType = response.header("Content-Type")
-                    val length = totalLengthFrom(response.header("Content-Range"))
-                        ?: response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 1 }
-                    val isVideo = MediaTypes.isVideoMime(contentType)
+                    val isPlaylist = MediaTypes.isHlsMime(contentType) || MediaTypes.isHlsUrl(url)
+                    // A playlist's byte size is the size of a text file; it
+                    // says nothing about the stream and must not be shown.
+                    val length = if (isPlaylist) {
+                        null
+                    } else {
+                        totalLengthFrom(response.header("Content-Range"))
+                            ?: response.header("Content-Length")?.toLongOrNull()?.takeIf { it > 1 }
+                    }
+                    val isVideo = MediaTypes.isVideoMime(contentType) || isPlaylist
                     if (!isVideo && !alreadyRecorded) return@use
 
                     record(
@@ -189,9 +197,58 @@ class MediaSniffer @Inject constructor(
                             detectedAt = System.currentTimeMillis(),
                         ),
                     )
+
+                    if (isPlaylist) expandMasterPlaylist(url, headers)
                 }
             }.onFailure { Timber.v(it, "Probe failed for %s", url) }
         }
+    }
+
+    /**
+     * Reads a playlist and, when it is a master, records each variant as its
+     * own sighting with the quality the master declares for it. The sheet then
+     * shows "1080P / 720P / 480P" instead of six identical "HLS" chips, and the
+     * master itself drops out as a duplicate menu.
+     *
+     * Playlists are small text files; the read is capped all the same.
+     */
+    private fun expandMasterPlaylist(url: String, headers: Map<String, String>) {
+        val request = Request.Builder()
+            .url(url)
+            .apply { headers.forEach { (k, v) -> header(k, v) } }
+            .build()
+        val content = client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) return
+            response.body?.source()?.use { source ->
+                source.request(MAX_PLAYLIST_BYTES)
+                source.buffer.readUtf8(minOf(source.buffer.size, MAX_PLAYLIST_BYTES))
+            } ?: return
+        }
+        if (!M3u8Parser.isMasterPlaylist(content)) return
+
+        val now = System.currentTimeMillis()
+        M3u8Parser.parseMaster(content, url).forEach { variant ->
+            record(
+                SniffedMedia(
+                    url = MediaIdentity.canonicalUrl(variant.url),
+                    pageUrl = pageUrl,
+                    mimeType = "application/vnd.apple.mpegurl",
+                    headers = headers,
+                    width = variant.width,
+                    height = variant.height,
+                    source = SniffSource.NETWORK,
+                    detectedAt = now,
+                    hlsVariantOf = url,
+                    audioOnly = variant.height == null && isAudioCodecOnly(variant.codecs),
+                ),
+            )
+        }
+    }
+
+    /** True when a CODECS attribute names no video codec at all. */
+    private fun isAudioCodecOnly(codecs: String?): Boolean {
+        val c = codecs?.lowercase() ?: return false
+        return VIDEO_CODEC_PREFIXES.none { c.contains(it) }
     }
 
     private fun record(media: SniffedMedia) {
@@ -211,7 +268,10 @@ class MediaSniffer @Inject constructor(
                 // bound; the extractor caps what is shown, but the sniffer holds
                 // the raw observations.
                 current.size >= MAX_TRACKED_MEDIA -> current
-                else -> current + media
+                else -> {
+                    Timber.d("Media found (%s): %s", media.source, media.url)
+                    current + media
+                }
             }
         }
     }
@@ -255,6 +315,9 @@ class MediaSniffer @Inject constructor(
     private companion object {
         const val MAX_PROBES_PER_PAGE = 24
         const val MAX_MEDIA_PROBES_PER_PAGE = 40
+        const val MAX_PLAYLIST_BYTES = 512L * 1024
+
+        val VIDEO_CODEC_PREFIXES = listOf("avc1", "avc3", "hev1", "hvc1", "vp09", "vp8", "vp9", "av01", "dvh1", "dvhe")
         const val MAX_TRACKED_MEDIA = 60
 
         val FORWARDED_HEADERS = setOf("referer", "user-agent", "origin", "cookie")

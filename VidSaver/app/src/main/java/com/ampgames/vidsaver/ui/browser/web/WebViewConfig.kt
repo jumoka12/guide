@@ -1,6 +1,7 @@
 package com.ampgames.vidsaver.ui.browser.web
 
 import android.annotation.SuppressLint
+import android.view.View
 import android.webkit.CookieManager
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -77,10 +78,17 @@ object WebViewConfig {
 
         CookieManager.getInstance().apply {
             setAcceptCookie(true)
-            // First-party cookies keep logins working; third-party cookies are
-            // off by default, which also removes a chunk of cross-site tracking.
-            setAcceptThirdPartyCookies(webView, false)
+            // Third-party cookies on: video CDNs (fbcdn.net, dmcdn.net, the
+            // TikTok edge hosts) sit on a different site from the page and
+            // some refuse a segment request that arrives without the session
+            // cookie the page set. The tracking cost is carried by the ad
+            // blocker, which blocks the trackers themselves.
+            setAcceptThirdPartyCookies(webView, true)
         }
+
+        // Video frames are composited only on a hardware layer; on a software
+        // layer the page paints and the <video> stays a black box.
+        webView.setLayerType(View.LAYER_TYPE_HARDWARE, null)
 
         webView.isVerticalScrollBarEnabled = true
         webView.isHorizontalScrollBarEnabled = false

@@ -56,6 +56,8 @@
     <string name="candidates_name_label">File name</string>
     <string name="candidates_size_unknown">Size unknown</string>
     <string name="candidates_no_audio">No audio</string>
+    <string name="candidates_stream">Stream</string>
+    <string name="browser_share_log">Share debug log</string>
     <string name="candidates_unmute">Tap to unmute</string>
     <string name="candidates_mute">Tap to mute</string>
     <string name="dialog_ok">OK</string>

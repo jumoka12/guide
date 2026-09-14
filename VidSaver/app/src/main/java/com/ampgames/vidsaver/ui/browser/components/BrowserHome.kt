@@ -68,6 +68,7 @@ fun BrowserHome(
     onToggleAdBlock: () -> Unit,
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onShareLog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -91,6 +92,7 @@ fun BrowserHome(
                 onToggleAdBlock = onToggleAdBlock,
                 onToggleSiteAllowlist = onToggleSiteAllowlist,
                 onToggleDesktopMode = onToggleDesktopMode,
+                onShareLog = onShareLog,
                 icon = { Icon(Icons.Filled.Menu, stringResource(R.string.browser_menu)) },
             )
             Spacer(modifier = Modifier.weight(1f))

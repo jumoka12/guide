@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Bookmarks
+import androidx.compose.material.icons.outlined.BugReport
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.DesktopWindows
 import androidx.compose.material.icons.outlined.FileDownload
@@ -93,6 +94,7 @@ fun BrowserTopBar(
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
     onShowFound: () -> Unit,
+    onShareLog: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     if (state.showHome) return
@@ -162,6 +164,7 @@ fun BrowserTopBar(
                     onToggleAdBlock = onToggleAdBlock,
                     onToggleSiteAllowlist = onToggleSiteAllowlist,
                     onToggleDesktopMode = onToggleDesktopMode,
+                    onShareLog = onShareLog,
                 )
             }
 
@@ -352,6 +355,7 @@ internal fun MenuButton(
     onToggleAdBlock: () -> Unit,
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onShareLog: () -> Unit,
     icon: @Composable () -> Unit = {
         Icon(Icons.Filled.MoreVert, stringResource(R.string.browser_menu))
     },
@@ -429,6 +433,13 @@ internal fun MenuButton(
                 trailingIcon = { Switch(checked = state.desktopMode, onCheckedChange = null) },
                 onClick = { dismiss(); onToggleDesktopMode() },
                 modifier = Modifier.testTag("toggle_desktop"),
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.browser_share_log)) },
+                leadingIcon = { Icon(Icons.Outlined.BugReport, null) },
+                onClick = { dismiss(); onShareLog() },
+                modifier = Modifier.testTag("share_log"),
             )
         }
     }

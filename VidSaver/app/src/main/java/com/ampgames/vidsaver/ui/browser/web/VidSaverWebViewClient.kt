@@ -10,6 +10,7 @@ import android.webkit.WebViewClient
 import com.ampgames.vidsaver.data.browser.adblock.AdBlocker
 import com.ampgames.vidsaver.data.browser.sniffer.MediaSniffer
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
+import com.ampgames.vidsaver.domain.media.MediaTypes
 import java.io.ByteArrayInputStream
 import timber.log.Timber
 
@@ -126,8 +127,13 @@ class VidSaverWebViewClient(
         error: WebResourceError,
     ) {
         super.onReceivedError(view, request, error)
+        val url = request.url.toString()
         if (request.isForMainFrame) {
-            Timber.w("Main frame failed: %s (%d %s)", request.url, error.errorCode, error.description)
+            Timber.w("Main frame failed: %s (%d %s)", url, error.errorCode, error.description)
+        } else if (MediaTypes.looksLikeMediaUrl(url)) {
+            // A video the page asked for and could not get is the whole story
+            // of a black player; it has to be in the log.
+            Timber.w("Media request failed: %s (%d %s)", url, error.errorCode, error.description)
         }
     }
 
@@ -137,8 +143,11 @@ class VidSaverWebViewClient(
         errorResponse: WebResourceResponse,
     ) {
         super.onReceivedHttpError(view, request, errorResponse)
+        val url = request.url.toString()
         if (request.isForMainFrame) {
-            Timber.w("Main frame HTTP %d for %s", errorResponse.statusCode, request.url)
+            Timber.w("Main frame HTTP %d for %s", errorResponse.statusCode, url)
+        } else if (MediaTypes.looksLikeMediaUrl(url)) {
+            Timber.w("Media request HTTP %d for %s", errorResponse.statusCode, url)
         }
     }
 
