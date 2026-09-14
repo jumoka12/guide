@@ -1,6 +1,7 @@
 package com.ampgames.vidsaver.ui.browser.components
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -75,6 +76,9 @@ fun BrowserHome(
     Column(
         modifier = modifier
             .fillMaxSize()
+            // Opaque: the WebView sits underneath, and a page left running
+            // there must not show through the start page.
+            .background(MaterialTheme.colorScheme.background)
             .testTag(BROWSER_HOME_TEST_TAG),
     ) {
         Row(

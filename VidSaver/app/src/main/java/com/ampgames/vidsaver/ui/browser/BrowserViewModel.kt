@@ -156,6 +156,9 @@ class BrowserViewModel @Inject constructor(
     fun onHomeClicked() {
         currentPageHtml = ""
         mediaSniffer.onNavigationStarted("")
+        // Unload the page: a feed left running under the start page keeps
+        // playing audio and holding memory. about:blank is treated as home.
+        send(BrowserCommand.LoadUrl(BLANK_PAGE))
         _uiState.update { state ->
             state.copy(
                 currentUrl = "",
@@ -173,8 +176,9 @@ class BrowserViewModel @Inject constructor(
 
     // ------------------------------------------------------- WebView callbacks
 
-    fun onPageStarted(url: String) {
+    fun onPageStarted(rawUrl: String) {
         currentPageHtml = ""
+        val url = rawUrl.asPageUrl()
         _uiState.update { state ->
             state.copy(
                 currentUrl = url,
@@ -190,7 +194,9 @@ class BrowserViewModel @Inject constructor(
         refreshBookmarkState(url)
     }
 
-    fun onPageFinished(url: String, title: String?) {
+    fun onPageFinished(rawUrl: String, title: String?) {
+        val url = rawUrl.asPageUrl()
+        if (url.isBlank()) return // the blank page behind the start page
         _uiState.update { state ->
             state.copy(
                 currentUrl = url,
@@ -428,7 +434,8 @@ class BrowserViewModel @Inject constructor(
     )
 
     /** A `pushState` move: same document, new post. Media from the old one is stale. */
-    fun onUrlChanged(url: String) {
+    fun onUrlChanged(rawUrl: String) {
+        val url = rawUrl.asPageUrl()
         currentPageHtml = ""
         _uiState.update { state ->
             state.copy(
@@ -531,8 +538,12 @@ class BrowserViewModel @Inject constructor(
 
     private fun newTabId(): String = UUID.randomUUID().toString()
 
+    /** The blank page is what "home" loads into the WebView; the model calls it "". */
+    private fun String.asPageUrl(): String = if (this == BLANK_PAGE) "" else this
+
     companion object {
         const val MAX_HTML_CHARS = 512 * 1024
+        const val BLANK_PAGE = "about:blank"
         private const val EXTRACTION_DEBOUNCE_MS = 350L
 
         /**

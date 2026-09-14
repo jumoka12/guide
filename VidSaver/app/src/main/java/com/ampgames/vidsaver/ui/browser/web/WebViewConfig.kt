@@ -44,14 +44,12 @@ object WebViewConfig {
             // starts; requiring a gesture leaves the player a black box. The
             // sniffer also only sees a video once the page actually loads it.
             mediaPlaybackRequiresUserGesture = false
-            // Plain WebView viewport semantics for mobile pages: the layout
-            // width is the view's own width, which is what a site built for
-            // phones expects. Wide viewport and overview mode are what a
-            // desktop site needs and are switched on with desktop mode only;
-            // left on for mobile pages they reshape a feed's full-screen
-            // layout and can leave its <video> with no box at all.
-            useWideViewPort = false
-            loadWithOverviewMode = false
+            // Honour the page's own <meta viewport>, as Chrome does, and zoom
+            // out pages that have none so a desktop layout fits the screen.
+            // (An earlier build turned these off chasing a zero-height
+            // player; the cause was the view's measurement, see WebViewHost.)
+            useWideViewPort = true
+            loadWithOverviewMode = true
             builtInZoomControls = true
             displayZoomControls = false
             cacheMode = WebSettings.LOAD_DEFAULT
@@ -100,12 +98,8 @@ object WebViewConfig {
         val target = if (desktop) DESKTOP_USER_AGENT else defaultUserAgent
         // Only touch the setting when it changes: this runs on every
         // recomposition, and rewriting the UA is not free.
-        if (webView.settings.userAgentString != target ||
-            webView.settings.useWideViewPort != desktop
-        ) {
+        if (webView.settings.userAgentString != target) {
             webView.settings.userAgentString = target
-            webView.settings.useWideViewPort = desktop
-            webView.settings.loadWithOverviewMode = desktop
         }
     }
 

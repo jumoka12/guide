@@ -76,7 +76,8 @@ fun BrowserWebView(
         AndroidView(
             modifier = modifier.testTag(BROWSER_WEBVIEW_TEST_TAG),
             factory = { context ->
-                WebView(context).apply {
+                val host = WebViewHost(context)
+                host.webView.apply {
                     WebViewConfig.apply(this)
                     // After apply(): the UA is the sanitised mobile one by then.
                     holder.defaultUserAgent = settings.userAgentString
@@ -153,14 +154,16 @@ fun BrowserWebView(
                     WebViewScripts.preload(context.applicationContext)
                     holder.webView = this
                 }
+                host
             },
-            update = { webView ->
-                holder.webView = webView
-                WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
+            update = { host ->
+                holder.webView = host.webView
+                WebViewConfig.setDesktopMode(host.webView, desktopMode, holder.defaultUserAgent)
             },
-            onRelease = { webView ->
+            onRelease = { host ->
                 fullscreen.hide()
                 client.onPageLoaded = null
+                val webView = host.release()
                 webView.stopLoading()
                 webView.removeJavascriptInterface(VideoSnifferBridge.INTERFACE_NAME)
                 webView.destroy()
@@ -186,8 +189,11 @@ fun BrowserWebView(
                 )
 
                 is BrowserCommand.SwitchTab -> holder.switchTab(webView, command.tab.id, command.tab.url)
+                // A base URL of our own: a null base reports the page as
+                // about:blank, which the model treats as the start page and
+                // would hide the self-test under it.
                 is BrowserCommand.LoadHtml ->
-                    webView.loadDataWithBaseURL(null, command.html, "text/html", "utf-8", null)
+                    webView.loadDataWithBaseURL(SELF_TEST_BASE_URL, command.html, "text/html", "utf-8", null)
             }
         }
     }
@@ -226,6 +232,8 @@ private class WebViewHolder {
         const val BLANK_PAGE = "about:blank"
     }
 }
+
+private const val SELF_TEST_BASE_URL = "https://selftest.vidsaver.app/"
 
 private const val HTML_CAPTURE_JS =
     "(function(){try{return document.documentElement.outerHTML}catch(e){return ''}})()"
