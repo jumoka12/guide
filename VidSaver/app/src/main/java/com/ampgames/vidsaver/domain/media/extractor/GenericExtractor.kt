@@ -100,8 +100,20 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                     detectedAt = media.detectedAt,
                     hlsVariantOf = media.hlsVariantOf,
                 )
-            }.sortedWith(ranking()).take(MAX_CANDIDATES).toList()
+            }.sortedWith(ranking()).distinctBy { qualityKey(it) }.take(MAX_CANDIDATES).toList()
         }
+
+        /**
+         * One chip per quality per stream host. A page that fetches its
+         * playlist twice under two tokens produced every quality twice; the
+         * ranked-first copy is the one kept.
+         */
+        private fun qualityKey(c: MediaCandidate): Any =
+            if (c.type == MediaType.HLS && c.height != null) {
+                Triple(Urls.host(c.url), c.height, c.hasAudio)
+            } else {
+                c.url
+            }
 
         /**
          * Below this a progressive "video" is an init segment, a redirect body

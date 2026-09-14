@@ -6,6 +6,7 @@ import androidx.work.Configuration
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.VideoFrameDecoder
+import com.ampgames.vidsaver.core.logging.CrashRecord
 import com.ampgames.vidsaver.core.logging.ReleaseTree
 import com.ampgames.vidsaver.data.download.DownloadNotifications
 import dagger.hilt.android.HiltAndroidApp
@@ -85,6 +86,9 @@ class VidSaverApplication : Application(), Configuration.Provider, ImageLoaderFa
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             runCatching { Timber.e(throwable, "Uncaught exception on %s", thread.name) }
+            // The process dies with its log; the file survives for the next
+            // debug-log share.
+            runCatching { CrashRecord.write(this, thread, throwable) }
             previous?.uncaughtException(thread, throwable)
         }
     }

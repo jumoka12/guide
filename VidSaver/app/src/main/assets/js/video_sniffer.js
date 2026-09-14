@@ -280,11 +280,41 @@
     }
   }
 
+  // Measures what the page's layout can actually see: viewport units and
+  // percentage heights, resolved live in this document. A player sized from
+  // a unit that resolves to zero here explains a zero-height player.
+  function unitsProbe() {
+    try {
+      var probe = document.createElement('div');
+      probe.style.cssText = 'position:absolute;left:0;top:0;width:0;visibility:hidden;pointer-events:none;';
+      var host = document.body || document.documentElement;
+      host.appendChild(probe);
+      var out = [];
+      var units = ['100vh', '100dvh', '100svh', '100lvh', '100%', '-webkit-fill-available'];
+      for (var i = 0; i < units.length; i++) {
+        probe.style.height = units[i];
+        out.push(units[i] + '=' + Math.round(probe.getBoundingClientRect().height));
+      }
+      host.removeChild(probe);
+      var html = document.documentElement;
+      var hcs = window.getComputedStyle(html);
+      out.push('html=' + Math.round(html.getBoundingClientRect().height) + '(' + hcs.height + '/' + hcs.minHeight + ')');
+      if (document.body) {
+        var bcs = window.getComputedStyle(document.body);
+        out.push('body=' + Math.round(document.body.getBoundingClientRect().height) + '(' + bcs.height + '/' + bcs.minHeight + ')');
+      }
+      return 'page units ' + out.join(' ');
+    } catch (e) {
+      return 'page units ?';
+    }
+  }
+
   function scan() {
     var found = [];
     var debug = [];
     try {
       collectVideoElements(found, debug);
+      if (debug.length) debug.unshift(unitsProbe());
       collectMetaTags(found);
     } catch (e) {
       // A page that breaks our scan must not break the page.

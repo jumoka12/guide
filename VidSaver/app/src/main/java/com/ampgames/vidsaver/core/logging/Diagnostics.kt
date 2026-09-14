@@ -44,6 +44,11 @@ object Diagnostics {
             val webView = runCatching { WebViewCompat.getCurrentWebViewPackage(context) }.getOrNull()
             appendLine("WebView: ${webView?.packageName ?: "unknown"} ${webView?.versionName ?: ""}")
             appendLine()
+            CrashRecord.read(context)?.let { crash ->
+                appendLine("=== Last crash ===")
+                appendLine(crash)
+                appendLine()
+            }
             appendLine("=== State ===")
             appendLine(runCatching(stateSnapshot).getOrElse { "snapshot failed: $it" })
             appendLine()

@@ -360,6 +360,23 @@ class GenericExtractorTest {
     }
 
     @Test
+    fun `the same quality from two copies of a playlist is one chip`() = runTest {
+        val masterA = "https://cdn.example.com/video/abc.m3u8?sec=1"
+        val masterB = "https://cdn.example.com/video/abc.m3u8?sec=2"
+        val result = extractor.extract(
+            pageUrl,
+            "",
+            listOf(
+                SniffedMedia("https://cdn.example.com/video/abc/1080.m3u8?sec=1", pageUrl, height = 1080, hlsVariantOf = masterA),
+                SniffedMedia("https://cdn.example.com/video/abc/480.m3u8?sec=1", pageUrl, height = 480, hlsVariantOf = masterA),
+                SniffedMedia("https://cdn.example.com/video/abc/1080.m3u8?sec=2", pageUrl, height = 1080, hlsVariantOf = masterB),
+                SniffedMedia("https://cdn.example.com/video/abc/480.m3u8?sec=2", pageUrl, height = 480, hlsVariantOf = masterB),
+            ),
+        )
+        assertEquals(listOf(1080, 480), result.map { it.height })
+    }
+
+    @Test
     fun `a playlist never shows a byte size and a tiny mp4 is not a video`() = runTest {
         val result = extractor.extract(
             pageUrl,
