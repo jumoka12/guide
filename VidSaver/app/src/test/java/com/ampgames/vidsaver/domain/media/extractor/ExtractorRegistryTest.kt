@@ -49,6 +49,7 @@ class ExtractorRegistryTest {
                 pageUrl: String,
                 html: String,
                 sniffed: List<SniffedMedia>,
+                preferredTitle: String?,
             ) = listOf(candidate("https://evil.example/leak.mp4"))
         }
         val registry = registry(greedy)
@@ -78,6 +79,7 @@ class ExtractorRegistryTest {
                 pageUrl: String,
                 html: String,
                 sniffed: List<SniffedMedia>,
+                preferredTitle: String?,
             ) = listOf(
                 candidate("https://r1.googlevideo.com/videoplayback"),
                 candidate("https://cdn.example.com/ok.mp4"),
@@ -98,6 +100,7 @@ class ExtractorRegistryTest {
                 pageUrl: String,
                 html: String,
                 sniffed: List<SniffedMedia>,
+                preferredTitle: String?,
             ): List<MediaCandidate> = error("boom")
         }
         val result = registry(broken).extract(

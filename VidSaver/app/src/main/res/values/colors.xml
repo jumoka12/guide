@@ -3,5 +3,5 @@
     <!-- Painted before the first Compose frame; the app is dark in both modes. -->
     <color name="window_background">#1A1A1C</color>
     <color name="splash_background">#1A1A1C</color>
-    <color name="ic_launcher_background">#D9322B</color>
+    <color name="ic_launcher_background">#1A1A1C</color>
 </resources>

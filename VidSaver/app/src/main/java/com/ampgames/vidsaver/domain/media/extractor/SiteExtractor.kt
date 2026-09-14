@@ -22,9 +22,15 @@ interface SiteExtractor {
     /** Whether this extractor claims [url]. The registry takes the first claim. */
     fun matches(url: String): Boolean
 
+    /**
+     * @param preferredTitle the name the page itself gives the playing clip
+     *   (its caption), when the injected script found one. Beats the page
+     *   title, which on a feed is the site's slogan.
+     */
     suspend fun extract(
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
+        preferredTitle: String? = null,
     ): List<MediaCandidate>
 }

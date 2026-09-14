@@ -41,6 +41,8 @@ data class DomMediaReport(
 data class DomMediaPayload(
     @SerialName("pageUrl") val pageUrl: String = "",
     val title: String? = null,
+    /** The caption of the clip that is playing, when the page has one nearby. */
+    val caption: String? = null,
     val media: List<DomMediaReport> = emptyList(),
     /**
      * One line per `<video>` on the page, whatever its source — including the

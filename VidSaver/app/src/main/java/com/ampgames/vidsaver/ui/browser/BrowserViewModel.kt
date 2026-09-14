@@ -106,7 +106,7 @@ class BrowserViewModel @Inject constructor(
                     _uiState.update { it.copy(candidates = emptyList()) }
                     return@collect
                 }
-                val candidates = extractorRegistry.extract(pageUrl, currentPageHtml, sniffed)
+                val candidates = extractorRegistry.extract(pageUrl, currentPageHtml, sniffed, activeCaption)
                 _uiState.update { it.copy(candidates = candidates) }
             }
         }
@@ -155,6 +155,7 @@ class BrowserViewModel @Inject constructor(
 
     fun onHomeClicked() {
         currentPageHtml = ""
+        activeCaption = null
         mediaSniffer.onNavigationStarted("")
         // Unload the page: a feed left running under the start page keeps
         // playing audio and holding memory. about:blank is treated as home.
@@ -178,6 +179,7 @@ class BrowserViewModel @Inject constructor(
 
     fun onPageStarted(rawUrl: String) {
         currentPageHtml = ""
+        activeCaption = null
         val url = rawUrl.asPageUrl()
         _uiState.update { state ->
             state.copy(
@@ -244,8 +246,22 @@ class BrowserViewModel @Inject constructor(
 
     fun onDomMediaFound(payload: DomMediaPayload) {
         lastDomDebug = payload.debug.map { it.take(1_000) }
+        val caption = payload.caption?.trim()?.takeIf { it.length >= 3 }
+        if (caption != null && caption != activeCaption) {
+            activeCaption = caption
+            // The name changed even if the files did not; re-run extraction.
+            mediaSniffer.touch()
+        }
         if (payload.media.isNotEmpty()) mediaSniffer.onDomMediaFound(payload.media)
     }
+
+    /**
+     * The caption of the clip that is playing, from the page script. A feed
+     * page's title is the site's slogan; this is the name a person would
+     * recognise the file by.
+     */
+    @Volatile
+    private var activeCaption: String? = null
 
     /** The page script's last view of every `<video>` element, for the debug log. */
     @Volatile
@@ -437,6 +453,7 @@ class BrowserViewModel @Inject constructor(
     fun onUrlChanged(rawUrl: String) {
         val url = rawUrl.asPageUrl()
         currentPageHtml = ""
+        activeCaption = null
         _uiState.update { state ->
             state.copy(
                 currentUrl = url,

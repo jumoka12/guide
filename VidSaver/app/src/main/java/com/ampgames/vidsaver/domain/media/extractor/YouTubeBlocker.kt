@@ -24,5 +24,6 @@ class YouTubeBlocker @Inject constructor() : SiteExtractor {
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
+        preferredTitle: String?,
     ): List<MediaCandidate> = emptyList()
 }

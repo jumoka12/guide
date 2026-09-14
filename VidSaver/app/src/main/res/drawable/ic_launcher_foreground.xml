@@ -1,15 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Play button over a download arrow: the app mark. Vector-only so the repo
-     carries no binary image assets. -->
+<!--
+  Adaptive-icon foreground: the brand disc with a play triangle over a
+  download arrow, drawn inside the 66dp safe zone of the 108dp canvas so no
+  launcher mask clips it. The background layer supplies the red; this layer
+  carries the white mark and a slightly darker disc rim for depth.
+-->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
+    <!-- Disc rim, a shade darker than the background so the mark reads as an object. -->
+    <path
+        android:fillColor="#B8261F"
+        android:pathData="M54,54 m-30,0 a30,30 0 1,1 60,0 a30,30 0 1,1 -60,0" />
+    <path
+        android:fillColor="#E5433A"
+        android:pathData="M54,54 m-27,0 a27,27 0 1,1 54,0 a27,27 0 1,1 -54,0" />
+    <!-- Play triangle -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M44,34 L70,48 L44,62 Z" />
+        android:pathData="M47,38 L66,49 L47,60 Z" />
+    <!-- Download arrow -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M51,66 h6 v9 h7 l-10,11 l-10,-11 h7 z" />
+        android:pathData="M52,62 h4 v5 h5 l-7,8 l-7,-8 h5 z" />
+    <!-- Tray -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M42,77 h24 v3 h-24 z" />
 </vector>

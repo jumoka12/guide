@@ -46,14 +46,16 @@ class ExtractorRegistry @Inject constructor(
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
+        preferredTitle: String? = null,
     ): List<MediaCandidate> {
         if (isUnsupported(pageUrl)) return emptyList()
 
         val extractor = extractorFor(pageUrl)
-        val candidates = runCatching { extractor.extract(pageUrl, html, sniffed) }
+        val candidates = runCatching { extractor.extract(pageUrl, html, sniffed, preferredTitle) }
             .getOrElse { error ->
                 Timber.e(error, "Extractor %s failed, falling back to generic", extractor.name)
-                runCatching { genericExtractor.extract(pageUrl, html, sniffed) }.getOrDefault(emptyList())
+                runCatching { genericExtractor.extract(pageUrl, html, sniffed, preferredTitle) }
+                    .getOrDefault(emptyList())
             }
 
         // Defence in depth: never surface media from a blocked domain, even if a

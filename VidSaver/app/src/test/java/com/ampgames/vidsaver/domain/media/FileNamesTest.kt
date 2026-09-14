@@ -121,6 +121,23 @@ class FileNamesTest {
     }
 
     @Test
+    fun `a feed page's slogan is not a title`() {
+        assertNull(FileNames.cleanTitle("TikTok - Make Your Day", "https://www.tiktok.com/"))
+        assertNull(FileNames.cleanTitle("Facebook", "https://www.facebook.com/reel/1"))
+        assertNull(FileNames.cleanTitle("For You", "https://www.tiktok.com/foryou"))
+        // A leading site name is stripped, the rest kept.
+        assertEquals("Khan baba lifts a car", FileNames.cleanTitle("TikTok - Khan baba lifts a car", "https://www.tiktok.com/"))
+    }
+
+    @Test
+    fun `a feed clip with no title and no post id is named by site and moment`() {
+        val at = 1_757_884_245_000L
+        val name = FileNames.forCandidate("TikTok - Make Your Day", "https://www.tiktok.com/", "mp4", detectedAt = at)
+        assertTrue("got $name", Regex("""tiktok_\d{8}_\d{6}\.mp4""").matches(name))
+        assertEquals("tiktok.com.mp4", FileNames.forCandidate(null, "https://www.tiktok.com/", "mp4"))
+    }
+
+    @Test
     fun `deduplicate appends a counter before the extension`() {
         val taken = setOf("clip.mp4", "clip (2).mp4")
         assertEquals("clip (3).mp4", FileNames.deduplicate("clip.mp4", taken))

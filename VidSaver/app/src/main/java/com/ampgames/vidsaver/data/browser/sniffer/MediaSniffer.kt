@@ -65,6 +65,15 @@ class MediaSniffer @Inject constructor(
     private val probeCount = AtomicInteger(0)
     private val mediaProbeCount = AtomicInteger(0)
 
+    /**
+     * Re-emits the current list unchanged, for a collector that wants to
+     * recompute over it — the caption changed, say, and every candidate's
+     * name with it. A copy is a new object, so StateFlow does not swallow it.
+     */
+    fun touch() {
+        _media.update { current -> current.map { it.copy() } }
+    }
+
     /** One line per sighting, for the debug log. */
     fun describe(): String = _media.value.joinToString("\n") { m ->
         val where = Urls.host(m.url).orEmpty() + m.url.substringAfter(Urls.host(m.url).orEmpty(), "")
@@ -119,15 +128,21 @@ class MediaSniffer @Inject constructor(
         // times in byte ranges, and probing each one would mean dozens of extra
         // requests for a single clip.
         val canonical = MediaIdentity.canonicalUrl(url)
-        if (!seen.add(MediaIdentity.contentKey(canonical))) return
+        val hasRange = requestHeaders.keys.any { it.equals("Range", ignoreCase = true) }
+        if (!seen.add(MediaIdentity.contentKey(canonical))) {
+            // Known already. A further byte-range request means it is still
+            // streaming: on a site whose <video> hides behind a blob: URL,
+            // "still streaming" is the only sign of which clip is on screen.
+            if (hasRange) bumpRecency(canonical)
+            return
+        }
 
         val headers = buildHeaders(canonical, requestHeaders)
         // A byte-range request is a media request whatever the URL looks like:
         // players fetch video in ranges and nothing else does. Sites that
         // serve video from extension-less URLs (TikTok, Instagram) are only
         // ever caught this way.
-        val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical) ||
-            requestHeaders.keys.any { it.equals("Range", ignoreCase = true) } ||
+        val looksLikeMedia = MediaTypes.looksLikeMediaUrl(canonical) || hasRange ||
             destination == "video" || destination == "audio" ||
             hintsAtVideo(canonical)
 
@@ -147,6 +162,19 @@ class MediaSniffer @Inject constructor(
 
         if (shouldProbe(canonical, looksLikeMedia)) {
             scope.launch { probeContentType(canonical, headers, alreadyRecorded = looksLikeMedia) }
+        }
+    }
+
+    /** Marks a known file as just requested again, without adding anything else. */
+    private fun bumpRecency(canonicalUrl: String) {
+        val key = MediaIdentity.contentKey(canonicalUrl)
+        val now = System.currentTimeMillis()
+        _media.update { current ->
+            val index = current.indexOfFirst {
+                it.source == SniffSource.NETWORK && MediaIdentity.contentKey(it.url) == key
+            }
+            if (index < 0 || now - current[index].detectedAt < RECENCY_BUMP_MS) return@update current
+            current.toMutableList().also { list -> list[index] = list[index].copy(detectedAt = now) }
         }
     }
 
@@ -378,6 +406,9 @@ class MediaSniffer @Inject constructor(
         const val MAX_PROBES_PER_PAGE = 40
         const val MAX_MEDIA_PROBES_PER_PAGE = 40
         const val MAX_PLAYLIST_BYTES = 512L * 1024
+
+        /** Bump at most this often per file; a player asks for ranges constantly. */
+        const val RECENCY_BUMP_MS = 1_500L
 
         val NON_MEDIA_DESTINATIONS = setOf(
             "image", "script", "style", "font", "document", "iframe", "frame", "manifest",

@@ -309,6 +309,36 @@
     }
   }
 
+  // The caption of the clip that is playing. A feed page's <title> is the
+  // site's slogan, so the only name worth saving under is the post's own
+  // text, found near the active <video>. Site hooks first, then anything
+  // that calls itself a description or caption, nearest ancestor first.
+  var CAPTION_SELECTORS = [
+    '[data-e2e="browse-video-desc"]', '[data-e2e="video-desc"]', '[data-e2e="new-desc-span"]',
+    '[data-e2e*="desc"]', '[class*="video-meta-caption"]', '[class*="Caption"]', '[class*="caption"]',
+    '[class*="Desc"]', '[class*="desc"]', 'figcaption', 'h1'
+  ];
+
+  function captionFor(video) {
+    if (!video) return null;
+    try {
+      var node = video.parentElement;
+      for (var depth = 0; node && depth < 8; depth++) {
+        for (var i = 0; i < CAPTION_SELECTORS.length; i++) {
+          var hits = node.querySelectorAll(CAPTION_SELECTORS[i]);
+          for (var j = 0; j < hits.length && j < 5; j++) {
+            var text = (hits[j].textContent || '').replace(/\s+/g, ' ').trim();
+            if (text.length >= 3 && text.length <= 300) return text.substring(0, 160);
+          }
+        }
+        node = node.parentElement;
+      }
+    } catch (e) {
+      /* a page that breaks our lookup must not break the page */
+    }
+    return null;
+  }
+
   function scan() {
     var found = [];
     var debug = [];
@@ -325,6 +355,7 @@
     var payload = JSON.stringify({
       pageUrl: window.location.href,
       title: pageTitle(),
+      caption: captionFor(lastActive),
       media: found,
       debug: debug
     });

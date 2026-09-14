@@ -28,7 +28,8 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
-    ): List<MediaCandidate> = buildCandidates(pageUrl, sniffed, pageTitle(html))
+        preferredTitle: String?,
+    ): List<MediaCandidate> = buildCandidates(pageUrl, sniffed, preferredTitle ?: pageTitle(html))
 
     companion object {
 
@@ -94,6 +95,7 @@ class GenericExtractor @Inject constructor() : SiteExtractor {
                         pageUrl = pageUrl,
                         extension = extension,
                         resolution = resolution,
+                        detectedAt = media.detectedAt,
                     ),
                     source = media.source,
                     activityScore = media.activity.score,

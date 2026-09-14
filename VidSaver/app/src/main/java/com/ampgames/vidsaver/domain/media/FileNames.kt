@@ -52,10 +52,28 @@ object FileNames {
     fun cleanTitle(raw: String?, pageUrl: String): String? {
         if (raw.isNullOrBlank()) return null
         var title = HASHTAG.replace(raw, " ")
-        siteName(pageUrl)?.let { title = siteSuffix(it).replace(title, "") }
+        siteName(pageUrl)?.let { site ->
+            title = siteSuffix(site).replace(title, "")
+            title = sitePrefix(site).replace(title, "")
+        }
         title = title.replace(WHITESPACE, " ").trim().trim('-', '|', '•', ':', ' ')
+        // "Make Your Day", "For You": the site's slogan or a feed's name is not
+        // the name of a clip. Better to fall through to the post id or a stamp.
+        if (title.lowercase() in GENERIC_TITLES) return null
         return title.takeIf { it.isNotBlank() }
     }
+
+    /** Leading site branding: "TikTok - Make Your Day", "Facebook | Watch". */
+    private fun sitePrefix(siteName: String) = Regex(
+        """^\s*${Regex.escape(siteName)}\s*[|\-–—•:]\s*""",
+        RegexOption.IGNORE_CASE,
+    )
+
+    private val GENERIC_TITLES = setOf(
+        "make your day", "for you", "following", "explore", "discover", "watch", "reels", "reel",
+        "home", "feed", "videos", "video", "log in or sign up", "log in", "sign up",
+        "facebook", "instagram", "tiktok", "x", "twitter", "pinterest", "vimeo", "dailymotion",
+    )
 
     /** "facebook" for m.facebook.com, "tiktok" for www.tiktok.com. */
     private fun siteName(pageUrl: String): String? {
@@ -95,13 +113,26 @@ object FileNames {
         pageUrl: String,
         extension: String,
         resolution: String? = null,
+        detectedAt: Long? = null,
     ): String {
         val base = cleanTitle(title, pageUrl)
             ?: siteIdName(pageUrl)
+            ?: stampedName(pageUrl, detectedAt)
             ?: Urls.host(pageUrl)?.removePrefix("www.")
             ?: "video"
         val withResolution = if (resolution.isNullOrBlank()) base else "$base $resolution"
         return "${sanitize(withResolution)}.$extension"
+    }
+
+    /**
+     * `tiktok_20260914_213045`: for a feed page whose address carries no post
+     * id, the site and the moment the clip was seen — unique, and sortable.
+     */
+    fun stampedName(pageUrl: String, detectedAt: Long?): String? {
+        if (detectedAt == null || detectedAt <= 0L) return null
+        val site = siteName(pageUrl) ?: return null
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date(detectedAt))
+        return "${site}_$stamp"
     }
 
     /**

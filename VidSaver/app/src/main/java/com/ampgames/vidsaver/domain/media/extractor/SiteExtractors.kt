@@ -30,10 +30,11 @@ abstract class DelegatingSiteExtractor(
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
+        preferredTitle: String?,
     ): List<MediaCandidate> = GenericExtractor.buildCandidates(
         pageUrl = pageUrl,
         sniffed = sniffed,
-        fallbackTitle = GenericExtractor.pageTitle(html),
+        fallbackTitle = preferredTitle ?: GenericExtractor.pageTitle(html),
     )
 }
 
@@ -68,8 +69,9 @@ class FacebookExtractor @Inject constructor() :
         pageUrl: String,
         html: String,
         sniffed: List<SniffedMedia>,
+        preferredTitle: String?,
     ): List<MediaCandidate> {
-        val raw = super.extract(pageUrl, html, sniffed)
+        val raw = super.extract(pageUrl, html, sniffed, preferredTitle)
         val described = raw.map { it to describe(it.url) }
 
         val withSound = described.filter { (_, track) -> track.kind == Kind.MUXED }
