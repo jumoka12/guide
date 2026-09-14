@@ -3,19 +3,22 @@ package com.ampgames.vidsaver.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * VidSaver's own palette: one confident blue against true neutral greys.
+ * VidSaver's palette: one hot red against warm-free charcoal.
  *
- * Material 3's default greys carry a blue tint, which fights a blue accent and
- * makes everything look faintly cold. These are neutral on purpose, so the
- * accent is the only colour on screen and content (video thumbnails) stays the
- * loudest thing.
+ * The app is dark by design. A downloader lives next to video, and video looks
+ * best on a dark ground; the red is the only colour on screen so every red
+ * element reads as "the action". The greys are neutral on purpose — Material's
+ * defaults carry a blue tint that fights a red accent.
  */
 
 // --- Accent ------------------------------------------------------------------
-internal val BrandPrimary = Color(0xFF2457D6)
+internal val BrandPrimary = Color(0xFFD9322B)
 internal val BrandOnPrimary = Color(0xFFFFFFFF)
-internal val BrandPrimaryContainer = Color(0xFFE6EDFD)
-internal val BrandOnPrimaryContainer = Color(0xFF0C2B7A)
+internal val BrandPrimaryContainer = Color(0xFFFFDAD6)
+internal val BrandOnPrimaryContainer = Color(0xFF410002)
+
+/** Home-screen accent for the premium crown: gold, so it is not another red. */
+internal val BrandGold = Color(0xFFF2A93B)
 
 // --- Light: neutral greys, near-white ground ---------------------------------
 internal val LightBackground = Color(0xFFFFFFFF)
@@ -31,22 +34,24 @@ internal val LightSecondary = Color(0xFF5C636A)
 internal val LightSecondaryContainer = Color(0xFFE9ECEF)
 internal val LightOnSecondaryContainer = Color(0xFF2B3035)
 
-// --- Dark: warm-free near-black, not pure black ------------------------------
-internal val DarkPrimary = Color(0xFFAEC4FF)
-internal val DarkOnPrimary = Color(0xFF002A78)
-internal val DarkPrimaryContainer = Color(0xFF17398F)
-internal val DarkOnPrimaryContainer = Color(0xFFDCE4FF)
+// --- Dark: charcoal, not pure black ------------------------------------------
+internal val DarkPrimary = Color(0xFFE5433A)
+internal val DarkOnPrimary = Color(0xFFFFFFFF)
+internal val DarkPrimaryContainer = Color(0xFF4A1F1D)
+internal val DarkOnPrimaryContainer = Color(0xFFFFDAD6)
 
-internal val DarkBackground = Color(0xFF121416)
-internal val DarkSurface = Color(0xFF121416)
-internal val DarkSurfaceVariant = Color(0xFF282C30)
-internal val DarkOnSurface = Color(0xFFE6E8EA)
-internal val DarkOnSurfaceVariant = Color(0xFFB4BBC2)
-internal val DarkOutline = Color(0xFF3C4147)
-internal val DarkOutlineVariant = Color(0xFF2A2E33)
-internal val DarkSecondary = Color(0xFFB4BBC2)
-internal val DarkSecondaryContainer = Color(0xFF2E3338)
-internal val DarkOnSecondaryContainer = Color(0xFFE6E8EA)
+internal val DarkBackground = Color(0xFF1A1A1C)
+internal val DarkSurface = Color(0xFF1A1A1C)
+
+/** Pills, chips, the address field: one step lighter than the ground. */
+internal val DarkSurfaceVariant = Color(0xFF2B2B2E)
+internal val DarkOnSurface = Color(0xFFEDEDEE)
+internal val DarkOnSurfaceVariant = Color(0xFFB0B0B5)
+internal val DarkOutline = Color(0xFF4A4A4F)
+internal val DarkOutlineVariant = Color(0xFF323235)
+internal val DarkSecondary = Color(0xFFB0B0B5)
+internal val DarkSecondaryContainer = Color(0xFF323235)
+internal val DarkOnSecondaryContainer = Color(0xFFEDEDEE)
 
 // --- Shared ------------------------------------------------------------------
 internal val BrandError = Color(0xFFBA1A1A)
@@ -59,7 +64,7 @@ internal val BrandOnErrorContainer = Color(0xFF410002)
  *
  * Deliberately muted rather than each site's real brand colour: seven saturated
  * logos on one screen is a ransom note, and these have to sit under a single
- * blue accent without competing with it.
+ * red accent without competing with it.
  */
 internal val SiteTints: List<Color> = listOf(
     Color(0xFF3B6FE0),

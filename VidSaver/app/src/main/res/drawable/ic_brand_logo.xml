@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  The brand mark: a red disc carrying a play triangle over a download arrow.
+  Used large on the browser home page and small wherever the app names itself.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="160dp"
+    android:height="160dp"
+    android:viewportWidth="160"
+    android:viewportHeight="160">
+    <path android:pathData="M80,80 m-76,0 a76,76 0 1,1 152,0 a76,76 0 1,1 -152,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="24"
+                android:startY="20"
+                android:endX="136"
+                android:endY="148"
+                android:type="linear">
+                <item android:offset="0" android:color="#FFF06A3C" />
+                <item android:offset="1" android:color="#FFC8231E" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Play triangle -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M62,44 L108,72 L62,100 Z" />
+    <!-- Download arrow -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M76,104 h8 v10 h10 l-14,16 l-14,-16 h10 z" />
+    <!-- Tray -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillAlpha="0.85"
+        android:pathData="M54,132 h52 v6 h-52 z" />
+</vector>

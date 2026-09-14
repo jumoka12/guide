@@ -1,11 +1,14 @@
 package com.ampgames.vidsaver.ui.browser
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -16,10 +19,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.ampgames.vidsaver.R
@@ -59,6 +65,12 @@ fun BrowserScreen(
         }
     }
 
+    // System back walks page history, then returns to the start page. Only
+    // once there does it leave the screen.
+    BackHandler(enabled = !state.showHome) {
+        if (state.canGoBack) viewModel.onBackClicked() else viewModel.onHomeClicked()
+    }
+
     Scaffold(
         modifier = modifier.testTag(BROWSER_SCREEN_TEST_TAG),
         topBar = {
@@ -67,7 +79,6 @@ fun BrowserScreen(
                 onAddressChange = viewModel::onAddressTextChanged,
                 onAddressSubmit = viewModel::onAddressSubmitted,
                 onAddressFocusChange = viewModel::onAddressFocusChanged,
-                onBack = viewModel::onBackClicked,
                 onForward = viewModel::onForwardClicked,
                 onReload = viewModel::onReloadClicked,
                 onHome = viewModel::onHomeClicked,
@@ -77,11 +88,12 @@ fun BrowserScreen(
                 onToggleAdBlock = viewModel::onToggleAdBlock,
                 onToggleSiteAllowlist = viewModel::onToggleSiteAllowlist,
                 onToggleDesktopMode = viewModel::onToggleDesktopMode,
+                onShowFound = viewModel::onCandidatesClicked,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
-            if (state.candidateCount > 0) {
+            if (!state.showHome && state.candidateCount > 0) {
                 DownloadFab(
                     count = state.candidateCount,
                     onClick = viewModel::onCandidatesClicked,
@@ -111,10 +123,21 @@ fun BrowserScreen(
 
             if (state.showHome) {
                 BrowserHome(
-                    shortcuts = state.shortcuts,
-                    searchEngine = state.searchEngine,
+                    state = state,
+                    onAddressChange = viewModel::onAddressTextChanged,
+                    onAddressSubmit = viewModel::onAddressSubmitted,
+                    onAddressFocusChange = viewModel::onAddressFocusChanged,
                     onShortcutClick = viewModel::onShortcutClicked,
                     onSearchEngineSelected = viewModel::onSearchEngineSelected,
+                    onPremium = viewModel::onPremiumClicked,
+                    onHome = viewModel::onHomeClicked,
+                    onForward = viewModel::onForwardClicked,
+                    onToggleBookmark = viewModel::onToggleBookmark,
+                    onTabs = viewModel::onTabsClicked,
+                    onBookmarks = viewModel::onBookmarksClicked,
+                    onToggleAdBlock = viewModel::onToggleAdBlock,
+                    onToggleSiteAllowlist = viewModel::onToggleSiteAllowlist,
+                    onToggleDesktopMode = viewModel::onToggleDesktopMode,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
@@ -160,29 +183,38 @@ fun BrowserScreen(
     }
 }
 
+/**
+ * A round red button, the one action a page exists for. The count sits under
+ * the glyph rather than in a badge, which used to collide with it.
+ */
 @Composable
 private fun DownloadFab(
     count: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Solid brand colour: this is the one action the screen exists for, and a
-    // tonal container reads as "disabled" next to a busy web page. The count
-    // lives in the label rather than a badge, which collided with the icon.
-    ExtendedFloatingActionButton(
+    FloatingActionButton(
         onClick = onClick,
-        modifier = modifier.testTag(DOWNLOAD_FAB_TEST_TAG),
+        modifier = modifier
+            .size(64.dp)
+            .testTag(DOWNLOAD_FAB_TEST_TAG),
+        shape = MaterialTheme.shapes.extraLarge,
         containerColor = MaterialTheme.colorScheme.primary,
         contentColor = MaterialTheme.colorScheme.onPrimary,
-        icon = { Icon(Icons.Filled.Download, contentDescription = null) },
-        text = {
-            Text(
-                if (count == 1) {
-                    stringResource(R.string.browser_download_available)
-                } else {
-                    stringResource(R.string.browser_download_count, count)
-                },
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                imageVector = Icons.Filled.Download,
+                contentDescription = stringResource(R.string.browser_download_available),
+                modifier = Modifier.size(28.dp),
             )
-        },
-    )
+            if (count > 1) {
+                Text(
+                    text = "$count",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
 }

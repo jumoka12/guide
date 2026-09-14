@@ -1,5 +1,6 @@
 package com.ampgames.vidsaver.ui.browser.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
@@ -19,7 +19,10 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Bookmarks
 import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.DesktopWindows
+import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material.icons.outlined.Tab
 import androidx.compose.material3.DropdownMenu
@@ -47,23 +50,26 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.ampgames.vidsaver.R
+import com.ampgames.vidsaver.core.net.Urls
 import com.ampgames.vidsaver.ui.browser.BrowserUiState
 
 const val ADDRESS_BAR_TEST_TAG = "address_bar"
 const val BROWSER_MENU_TEST_TAG = "browser_menu"
 
 /**
- * One compact row: navigation, a search pill, tabs and an overflow menu.
+ * The bar shown over a page: tab counter, host pill, found-videos button and
+ * the overflow menu. The home page draws its own top row (see [BrowserHome]),
+ * so this returns nothing there.
  *
- * Everything that used to live in a second bottom bar (bookmarks, ad blocking,
- * desktop mode) moved into the overflow. Two stacked bars plus the app's own
- * navigation bar spent over 100dp of a phone screen on chrome, which is a lot to
- * charge for controls most people touch once a session.
+ * Back and forward are not on the bar: the system back button walks page
+ * history, and forward lives in the menu where the few who want it will look.
  */
 @Composable
 fun BrowserTopBar(
@@ -71,7 +77,6 @@ fun BrowserTopBar(
     onAddressChange: (String) -> Unit,
     onAddressSubmit: () -> Unit,
     onAddressFocusChange: (Boolean) -> Unit,
-    onBack: () -> Unit,
     onForward: () -> Unit,
     onReload: () -> Unit,
     onHome: () -> Unit,
@@ -81,34 +86,22 @@ fun BrowserTopBar(
     onToggleAdBlock: () -> Unit,
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    onShowFound: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    if (state.showHome) return
+
     val keyboard = LocalSoftwareKeyboardController.current
-    var menuExpanded by remember { mutableStateOf(false) }
 
     Surface(color = MaterialTheme.colorScheme.surface, modifier = modifier.fillMaxWidth()) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 6.dp),
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Back and forward only matter once there is history to walk.
-                if (!state.showHome) {
-                    IconButton(onClick = onBack, enabled = state.canGoBack) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowBack,
-                            stringResource(R.string.browser_back),
-                        )
-                    }
-                    IconButton(onClick = onForward, enabled = state.canGoForward) {
-                        Icon(
-                            Icons.AutoMirrored.Outlined.ArrowForward,
-                            stringResource(R.string.browser_forward),
-                        )
-                    }
-                }
+                TabCounter(count = state.tabs.size, onClick = onTabs)
 
                 AddressField(
                     state = state,
@@ -118,34 +111,52 @@ fun BrowserTopBar(
                         onAddressSubmit()
                     },
                     onAddressFocusChange = onAddressFocusChange,
-                    onReload = onReload,
+                    height = 44.dp,
+                    // A page shows its host; the whole URL appears on tap.
+                    unfocusedText = { Urls.host(it)?.removePrefix("www.") ?: it },
+                    leadingIcon = {
+                        IconButton(onClick = onReload, modifier = Modifier.size(36.dp)) {
+                            Icon(
+                                imageVector = if (state.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
+                                contentDescription = stringResource(
+                                    if (state.isLoading) R.string.browser_stop else R.string.browser_reload,
+                                ),
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
+                    },
+                    trailingIcon = null,
                     modifier = Modifier
                         .weight(1f)
-                        .padding(horizontal = 4.dp),
+                        .padding(horizontal = 8.dp),
                 )
 
-                TabsButton(count = state.tabs.size, onClick = onTabs)
-
-                Box {
-                    IconButton(
-                        onClick = { menuExpanded = true },
-                        modifier = Modifier.testTag(BROWSER_MENU_TEST_TAG),
-                    ) {
-                        Icon(Icons.Filled.MoreVert, stringResource(R.string.browser_menu))
-                    }
-
-                    BrowserMenu(
-                        expanded = menuExpanded,
-                        state = state,
-                        onDismiss = { menuExpanded = false },
-                        onHome = onHome,
-                        onToggleBookmark = onToggleBookmark,
-                        onBookmarks = onBookmarks,
-                        onToggleAdBlock = onToggleAdBlock,
-                        onToggleSiteAllowlist = onToggleSiteAllowlist,
-                        onToggleDesktopMode = onToggleDesktopMode,
+                IconButton(
+                    onClick = onShowFound,
+                    modifier = Modifier.testTag("show_found"),
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FileDownload,
+                        contentDescription = stringResource(R.string.browser_show_found),
+                        tint = if (state.candidateCount > 0) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        },
                     )
                 }
+
+                MenuButton(
+                    state = state,
+                    onHome = onHome,
+                    onForward = onForward,
+                    onToggleBookmark = onToggleBookmark,
+                    onTabs = onTabs,
+                    onBookmarks = onBookmarks,
+                    onToggleAdBlock = onToggleAdBlock,
+                    onToggleSiteAllowlist = onToggleSiteAllowlist,
+                    onToggleDesktopMode = onToggleDesktopMode,
+                )
             }
 
             // A hairline progress bar, not a chunky one — page loads are frequent
@@ -165,30 +176,31 @@ fun BrowserTopBar(
 }
 
 /**
- * The address pill.
+ * The address pill, shared by the page bar and the home page.
  *
  * A plain string-valued TextField puts the cursor at the end whenever the URL
- * changes, so a long address scrolls to its tail and the user sees
- * "…4194402202515" instead of the site. Driving the field with a
- * [TextFieldValue] pins the view to the start while unfocused and selects
- * everything on focus, so one tap replaces the URL — the way a browser works.
+ * changes, so a long address scrolls to its tail. Driving the field with a
+ * [TextFieldValue] shows [unfocusedText] anchored to the start while idle and
+ * the full URL, selected, on focus — one tap replaces it, as in every browser.
  */
 @Composable
-private fun AddressField(
+internal fun AddressField(
     state: BrowserUiState,
     onAddressChange: (String) -> Unit,
     onAddressSubmit: () -> Unit,
     onAddressFocusChange: (Boolean) -> Unit,
-    onReload: () -> Unit,
+    height: Dp,
+    unfocusedText: (String) -> String,
+    leadingIcon: (@Composable () -> Unit)?,
+    trailingIcon: (@Composable () -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     var focused by remember { mutableStateOf(false) }
-    var fieldValue by remember { mutableStateOf(TextFieldValue(state.addressText)) }
+    var fieldValue by remember { mutableStateOf(TextFieldValue(unfocusedText(state.addressText))) }
 
     LaunchedEffect(state.addressText, focused) {
         fieldValue = when {
-            // Unfocused: mirror the model, anchored to the start of the URL.
-            !focused -> TextFieldValue(state.addressText, TextRange.Zero)
+            !focused -> TextFieldValue(unfocusedText(state.addressText), TextRange.Zero)
             // The model changed under an active edit (a tab switch, say).
             fieldValue.text != state.addressText ->
                 TextFieldValue(state.addressText, TextRange(0, state.addressText.length))
@@ -203,26 +215,30 @@ private fun AddressField(
             if (value.text != state.addressText) onAddressChange(value.text)
         },
         modifier = modifier
-            .height(46.dp)
+            .height(height)
             .onFocusChanged {
                 val gained = it.isFocused && !focused
                 focused = it.isFocused
                 if (gained) {
-                    fieldValue = fieldValue.copy(selection = TextRange(0, fieldValue.text.length))
+                    val full = state.addressText
+                    fieldValue = TextFieldValue(full, TextRange(0, full.length))
                 }
                 onAddressFocusChange(it.isFocused)
             }
             .testTag(ADDRESS_BAR_TEST_TAG),
         singleLine = true,
         shape = MaterialTheme.shapes.extraLarge,
-        textStyle = MaterialTheme.typography.bodyMedium,
+        textStyle = MaterialTheme.typography.bodyLarge,
         placeholder = {
             Text(
                 text = stringResource(R.string.browser_address_hint),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
             )
         },
+        leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
         // A filled pill with no underline: the field is the shape, so the
         // indicator lines are just noise.
         colors = TextFieldDefaults.colors(
@@ -231,108 +247,167 @@ private fun AddressField(
             focusedIndicatorColor = Color.Transparent,
             unfocusedIndicatorColor = Color.Transparent,
             disabledIndicatorColor = Color.Transparent,
+            cursorColor = MaterialTheme.colorScheme.primary,
         ),
         keyboardOptions = KeyboardOptions(
             keyboardType = KeyboardType.Uri,
             imeAction = ImeAction.Go,
         ),
         keyboardActions = KeyboardActions(onGo = { onAddressSubmit() }),
-        trailingIcon = if (state.showHome) {
-            null
-        } else {
-            {
-                IconButton(onClick = onReload, modifier = Modifier.size(36.dp)) {
-                    Icon(
-                        imageVector = if (state.isLoading) Icons.Filled.Close else Icons.Filled.Refresh,
-                        contentDescription = stringResource(
-                            if (state.isLoading) R.string.browser_stop else R.string.browser_reload,
-                        ),
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-            }
-        },
     )
 }
 
-/** Tab count in a rounded square, the way every mobile browser draws it. */
+/** The home page's pill: a link glyph, the hint, and a red search glyph. */
 @Composable
-private fun TabsButton(count: Int, onClick: () -> Unit) {
-    IconButton(onClick = onClick, modifier = Modifier.testTag("open_tabs")) {
-        Box(contentAlignment = Alignment.Center) {
+internal fun HomeAddressField(
+    state: BrowserUiState,
+    onAddressChange: (String) -> Unit,
+    onAddressSubmit: () -> Unit,
+    onAddressFocusChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val keyboard = LocalSoftwareKeyboardController.current
+    val submit = {
+        keyboard?.hide()
+        onAddressSubmit()
+    }
+    AddressField(
+        state = state,
+        onAddressChange = onAddressChange,
+        onAddressSubmit = submit,
+        onAddressFocusChange = onAddressFocusChange,
+        height = 56.dp,
+        unfocusedText = { it },
+        leadingIcon = {
             Icon(
-                imageVector = Icons.Outlined.Tab,
-                contentDescription = stringResource(R.string.tabs_open),
-                modifier = Modifier.size(24.dp),
+                imageVector = Icons.Outlined.Link,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+        },
+        trailingIcon = {
+            IconButton(onClick = submit) {
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = stringResource(R.string.browser_search),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+            }
+        },
+        modifier = modifier,
+    )
+}
+
+/** The tab count in an outlined rounded square, the way mobile browsers draw it. */
+@Composable
+private fun TabCounter(count: Int, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.testTag("open_tabs")) {
+        Box(
+            modifier = Modifier
+                .size(26.dp)
+                .border(2.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.extraSmall),
+            contentAlignment = Alignment.Center,
+        ) {
             Text(
                 text = if (count > 9) "9+" else "$count",
-                style = MaterialTheme.typography.labelSmall,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
 }
 
+/** The overflow button and its menu, shared by the page bar and the home page. */
 @Composable
-private fun BrowserMenu(
-    expanded: Boolean,
+internal fun MenuButton(
     state: BrowserUiState,
-    onDismiss: () -> Unit,
     onHome: () -> Unit,
+    onForward: () -> Unit,
     onToggleBookmark: () -> Unit,
+    onTabs: () -> Unit,
     onBookmarks: () -> Unit,
     onToggleAdBlock: () -> Unit,
     onToggleSiteAllowlist: () -> Unit,
     onToggleDesktopMode: () -> Unit,
+    icon: @Composable () -> Unit = {
+        Icon(Icons.Filled.MoreVert, stringResource(R.string.browser_menu))
+    },
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        if (!state.showHome) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.testTag(BROWSER_MENU_TEST_TAG),
+            content = icon,
+        )
+
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            val dismiss = { expanded = false }
+
+            if (!state.showHome) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.browser_home)) },
+                    leadingIcon = { Icon(Icons.Outlined.Home, null) },
+                    onClick = { dismiss(); onHome() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.browser_forward)) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
+                    enabled = state.canGoForward,
+                    onClick = { dismiss(); onForward() },
+                )
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.browser_bookmark)) },
+                    leadingIcon = {
+                        Icon(
+                            if (state.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
+                            null,
+                        )
+                    },
+                    onClick = { dismiss(); onToggleBookmark() },
+                    modifier = Modifier.testTag("menu_bookmark"),
+                )
+            } else {
+                // The home page has no tab counter in its top row, so tabs are
+                // reachable from here.
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tabs_title, state.tabs.size)) },
+                    leadingIcon = { Icon(Icons.Outlined.Tab, null) },
+                    onClick = { dismiss(); onTabs() },
+                    modifier = Modifier.testTag("open_tabs"),
+                )
+            }
+
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.browser_home)) },
-                leadingIcon = { Icon(Icons.Outlined.Home, null) },
-                onClick = { onDismiss(); onHome() },
+                text = { Text(stringResource(R.string.bookmarks_open)) },
+                leadingIcon = { Icon(Icons.Outlined.Bookmarks, null) },
+                onClick = { dismiss(); onBookmarks() },
+                modifier = Modifier.testTag("open_bookmarks"),
             )
+
+            // On a page this toggles the per-site override; on the home screen there
+            // is no site, so it toggles the global setting.
+            val blockingHere = state.adBlockEnabled && !(!state.showHome && state.siteAllowlisted)
             DropdownMenuItem(
-                text = { Text(stringResource(R.string.browser_bookmark)) },
-                leadingIcon = {
-                    Icon(
-                        if (state.isBookmarked) Icons.Filled.Bookmark else Icons.Outlined.BookmarkBorder,
-                        null,
-                    )
+                text = { Text(stringResource(if (blockingHere) R.string.adblock_on else R.string.adblock_off)) },
+                leadingIcon = { Icon(Icons.Outlined.Shield, null) },
+                trailingIcon = { Switch(checked = blockingHere, onCheckedChange = null) },
+                onClick = {
+                    dismiss()
+                    if (state.showHome) onToggleAdBlock() else onToggleSiteAllowlist()
                 },
-                onClick = { onDismiss(); onToggleBookmark() },
-                modifier = Modifier.testTag("menu_bookmark"),
+                modifier = Modifier.testTag("toggle_adblock"),
+            )
+
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.browser_desktop_mode)) },
+                leadingIcon = { Icon(Icons.Outlined.DesktopWindows, null) },
+                trailingIcon = { Switch(checked = state.desktopMode, onCheckedChange = null) },
+                onClick = { dismiss(); onToggleDesktopMode() },
+                modifier = Modifier.testTag("toggle_desktop"),
             )
         }
-
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.bookmarks_open)) },
-            leadingIcon = { Icon(Icons.Outlined.Bookmarks, null) },
-            onClick = { onDismiss(); onBookmarks() },
-            modifier = Modifier.testTag("open_bookmarks"),
-        )
-
-        // On a page this toggles the per-site override; on the home screen there
-        // is no site, so it toggles the global setting.
-        val blockingHere = state.adBlockEnabled && !(!state.showHome && state.siteAllowlisted)
-        DropdownMenuItem(
-            text = { Text(stringResource(if (blockingHere) R.string.adblock_on else R.string.adblock_off)) },
-            leadingIcon = { Icon(Icons.Outlined.Shield, null) },
-            trailingIcon = { Switch(checked = blockingHere, onCheckedChange = null) },
-            onClick = {
-                onDismiss()
-                if (state.showHome) onToggleAdBlock() else onToggleSiteAllowlist()
-            },
-            modifier = Modifier.testTag("toggle_adblock"),
-        )
-
-        DropdownMenuItem(
-            text = { Text(stringResource(R.string.browser_desktop_mode)) },
-            leadingIcon = { Icon(Icons.Outlined.DesktopWindows, null) },
-            trailingIcon = { Switch(checked = state.desktopMode, onCheckedChange = null) },
-            onClick = { onDismiss(); onToggleDesktopMode() },
-            modifier = Modifier.testTag("toggle_desktop"),
-        )
     }
 }

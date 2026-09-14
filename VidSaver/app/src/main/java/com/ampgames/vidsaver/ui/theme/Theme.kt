@@ -1,7 +1,6 @@
 package com.ampgames.vidsaver.ui.theme
 
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -59,6 +58,9 @@ private val DarkColors = darkColorScheme(
 )
 
 /**
+ * @param darkTheme Dark by default regardless of the system setting: the app is
+ *   designed around video, and video sits on a dark ground. The light palette
+ *   stays complete so a Settings toggle can offer it later.
  * @param dynamicColor Material You. Supported, but **off by default**: dynamic
  *   colour repaints the app in whatever hue the user's wallpaper produces, which
  *   leaves VidSaver with no identity of its own. Phase 7 surfaces this as a
@@ -66,7 +68,7 @@ private val DarkColors = darkColorScheme(
  */
 @Composable
 fun VidSaverTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
+    darkTheme: Boolean = true,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {

@@ -29,7 +29,10 @@ object WebViewConfig {
             domStorageEnabled = true
             databaseEnabled = true
             loadsImagesAutomatically = true
-            mediaPlaybackRequiresUserGesture = true
+            // Social feeds autoplay muted and paint nothing until playback
+            // starts; requiring a gesture leaves the player a black box. The
+            // sniffer also only sees a video once the page actually loads it.
+            mediaPlaybackRequiresUserGesture = false
             useWideViewPort = true
             loadWithOverviewMode = true
             builtInZoomControls = true

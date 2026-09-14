@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches the dark theme ground so launch does not flash white. -->
-    <color name="window_background">#121416</color>
-    <color name="splash_background">#121416</color>
+    <!-- Same ground as the day palette: the app is dark by design. -->
+    <color name="window_background">#1A1A1C</color>
+    <color name="splash_background">#1A1A1C</color>
 </resources>

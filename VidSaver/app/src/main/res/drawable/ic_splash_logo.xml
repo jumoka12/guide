@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Splash mark: the app's play-over-download-arrow in brand blue.
+  Splash mark: the brand disc, play-over-download, in brand red.
 
-  288x288 viewport with the artwork inside the middle ~40%: the system splash
+  288x288 viewport with the artwork inside the middle ~66%: the system splash
   screen masks the outer ring, so anything near the edge gets cropped on some
   devices.
 -->
@@ -12,9 +12,12 @@
     android:viewportWidth="288"
     android:viewportHeight="288">
     <path
-        android:fillColor="#2457D6"
-        android:pathData="M120,96 L172,124 L120,152 Z" />
+        android:fillColor="#D9322B"
+        android:pathData="M144,144 m-92,0 a92,92 0 1,1 184,0 a92,92 0 1,1 -184,0" />
     <path
-        android:fillColor="#2457D6"
-        android:pathData="M134,162 h20 v22 h18 l-28,30 l-28,-30 h18 z" />
+        android:fillColor="#FFFFFF"
+        android:pathData="M122,100 L178,134 L122,168 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M139,172 h10 v12 h12 l-17,20 l-17,-20 h12 z" />
 </vector>

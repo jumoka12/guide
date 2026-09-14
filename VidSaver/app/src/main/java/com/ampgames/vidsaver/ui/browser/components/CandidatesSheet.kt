@@ -1,31 +1,34 @@
 package com.ampgames.vidsaver.ui.browser.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,15 +36,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
 import com.ampgames.vidsaver.R
 import com.ampgames.vidsaver.core.format.ByteFormat
-import com.ampgames.vidsaver.core.net.Urls
+import com.ampgames.vidsaver.domain.media.FileNames
 import com.ampgames.vidsaver.domain.media.MediaCandidate
 import com.ampgames.vidsaver.domain.media.MediaType
 import java.util.Locale
@@ -49,185 +51,199 @@ import java.util.Locale
 const val CANDIDATES_SHEET_TEST_TAG = "candidates_sheet"
 
 /**
- * Two tiers, not one wall. Videos the page itself named (a `<video>` element,
- * an `og:video` tag) are the headline; every other file the page pulled over the
- * network sits folded under "Other files". A feed that streams one clip as
- * twelve quality tiers now reads as one clip with twelve alternatives, which is
- * what it is.
+ * The download sheet: a live preview of the selected file, the name it will be
+ * saved under (editable), a grid of quality chips, and one Download button.
  *
- * When the page named nothing, everything is headline: there is no better
- * signal to rank by.
+ * Every file the page loaded is a chip. That reads as choice rather than as a
+ * wall because the chips are small, the best one is selected up front, and the
+ * preview shows what the chip actually is.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun CandidatesSheet(
     candidates: List<MediaCandidate>,
     onDownload: (MediaCandidate) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val primary = candidates.filter { it.isPrimary }.ifEmpty { candidates }
-    val others = if (primary.size == candidates.size) emptyList() else candidates - primary.toSet()
-    var showOthers by remember(candidates) { mutableStateOf(false) }
+    if (candidates.isEmpty()) {
+        // The page navigated away under the open sheet; nothing left to offer.
+        LaunchedEffect(Unit) { onDismiss() }
+        return
+    }
+
+    var selected by remember(candidates) { mutableStateOf(candidates.first()) }
+    // The name the person typed, if any; null means "use the candidate's".
+    var customBase by remember { mutableStateOf<String?>(null) }
+    var renaming by remember { mutableStateOf(false) }
+
+    val extension = selected.suggestedFileName.substringAfterLast('.', "")
+    val defaultBase = selected.suggestedFileName.substringBeforeLast('.')
+    val fileName = "${customBase ?: defaultBase}.$extension"
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         modifier = Modifier.testTag(CANDIDATES_SHEET_TEST_TAG),
     ) {
-        Column(modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp),
+        ) {
+            CandidatePreview(candidate = selected)
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+            ) {
+                Text(
+                    text = fileName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                IconButton(
+                    onClick = { renaming = true },
+                    modifier = Modifier.testTag("candidates_rename"),
+                ) {
+                    Icon(Icons.Outlined.Edit, stringResource(R.string.candidates_rename))
+                }
+            }
+
             Text(
-                text = stringResource(R.string.candidates_title, primary.size),
-                style = MaterialTheme.typography.titleLarge,
+                text = stringResource(R.string.candidates_download_as),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 12.dp, bottom = 12.dp),
             )
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                candidates.forEach { candidate ->
+                    QualityChip(
+                        candidate = candidate,
+                        selected = candidate.id == selected.id,
+                        onClick = { selected = candidate },
+                    )
+                }
+            }
+
             Text(
                 text = stringResource(R.string.candidates_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 4.dp, bottom = 12.dp),
+                modifier = Modifier.padding(top = 16.dp),
             )
 
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.heightIn(max = 520.dp),
+            Button(
+                onClick = { onDownload(selected.copy(suggestedFileName = fileName)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .height(52.dp)
+                    .testTag("candidates_download"),
             ) {
-                items(primary, key = { it.id }) { candidate ->
-                    CandidateRow(candidate = candidate, onDownload = { onDownload(candidate) })
-                }
-
-                if (others.isNotEmpty()) {
-                    item(key = "others_toggle") {
-                        OthersToggle(
-                            count = others.size,
-                            expanded = showOthers,
-                            onClick = { showOthers = !showOthers },
-                        )
-                    }
-                    if (showOthers) {
-                        items(others, key = { it.id }) { candidate ->
-                            CandidateRow(
-                                candidate = candidate,
-                                onDownload = { onDownload(candidate) },
-                                compact = true,
-                            )
-                        }
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.browser_download_available),
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
         }
     }
+
+    if (renaming) {
+        RenameDialog(
+            initial = customBase ?: defaultBase,
+            onConfirm = { typed ->
+                customBase = FileNames.sanitize(typed).takeIf { typed.isNotBlank() }
+                renaming = false
+            },
+            onDismiss = { renaming = false },
+        )
+    }
 }
 
+/** "1080P" over "22.8 MB" in an outlined tile; red when selected. */
 @Composable
-private fun OthersToggle(count: Int, expanded: Boolean, onClick: () -> Unit) {
-    Row(
+private fun QualityChip(
+    candidate: MediaCandidate,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val accent = MaterialTheme.colorScheme.primary
+    val shape = MaterialTheme.shapes.medium
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
+            .width(100.dp)
+            .clip(shape)
+            .background(if (selected) accent.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant)
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) accent else MaterialTheme.colorScheme.outlineVariant,
+                shape = shape,
+            )
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp)
-            .testTag("candidates_others"),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(vertical = 14.dp)
+            .testTag("candidate_${candidate.id.hashCode()}"),
     ) {
         Text(
-            text = stringResource(R.string.candidates_other_files, count),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f),
+            text = qualityLabel(candidate),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = if (selected) accent else MaterialTheme.colorScheme.onSurface,
         )
-        Icon(
-            imageVector = if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.primary,
+        Text(
+            text = candidate.sizeBytes?.let { ByteFormat.size(it) }
+                ?: stringResource(R.string.candidates_size_unknown),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }
 
+/** "1080P" when the height is known; the container ("MP4", "HLS") when not. */
+private fun qualityLabel(candidate: MediaCandidate): String =
+    candidate.resolutionLabel?.uppercase(Locale.US)
+        ?: if (candidate.type == MediaType.HLS) {
+            "HLS"
+        } else {
+            candidate.suggestedFileName.substringAfterLast('.', "video").uppercase(Locale.US)
+        }
+
 @Composable
-private fun CandidateRow(
-    candidate: MediaCandidate,
-    onDownload: () -> Unit,
-    modifier: Modifier = Modifier,
-    compact: Boolean = false,
+private fun RenameDialog(
+    initial: String,
+    onConfirm: (String) -> Unit,
+    onDismiss: () -> Unit,
 ) {
-    Row(
-        modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Thumbnail(url = candidate.thumbnailUrl, width = if (compact) 56.dp else 88.dp)
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = titleFor(candidate),
-                style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleSmall,
-                maxLines = 2,
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.candidates_rename)) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(stringResource(R.string.candidates_name_label)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
             )
-            Text(
-                text = describe(candidate),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 2.dp),
-            )
-        }
-
-        FilledTonalButton(
-            onClick = onDownload,
-            modifier = Modifier.testTag("download_${candidate.id.hashCode()}"),
-        ) {
-            Text(stringResource(R.string.candidates_download))
-        }
-    }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(text) }) { Text(stringResource(R.string.dialog_ok)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.dialog_cancel)) }
+        },
+    )
 }
-
-/** The poster when the page gave one; a quiet play glyph on a tile when not. */
-@Composable
-private fun Thumbnail(url: String?, width: Dp) {
-    val shape = MaterialTheme.shapes.small
-    if (url != null) {
-        AsyncImage(
-            model = url,
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .width(width)
-                .aspectRatio(16f / 9f)
-                .clip(shape),
-        )
-    } else {
-        Box(
-            modifier = Modifier
-                .width(width)
-                .aspectRatio(16f / 9f)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.surfaceVariant),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Outlined.PlayCircle,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(22.dp),
-            )
-        }
-    }
-}
-
-/** The page's title for the video, else the site it came from; never a file name. */
-private fun titleFor(candidate: MediaCandidate): String =
-    candidate.title?.takeIf { it.isNotBlank() }
-        ?: Urls.host(candidate.pageUrl)?.removePrefix("www.")
-        ?: Urls.host(candidate.url)?.removePrefix("www.")
-        ?: candidate.suggestedFileName
-
-/** "MP4 · 1080p · 24.3 MB", skipping whatever is unknown. */
-private fun describe(candidate: MediaCandidate): String {
-    val parts = buildList {
-        add(if (candidate.type == MediaType.HLS) "HLS" else formatContainer(candidate))
-        candidate.resolutionLabel?.let { add(it) }
-        candidate.sizeBytes?.let { add(ByteFormat.size(it)) }
-    }
-    return parts.joinToString(" · ")
-}
-
-private fun formatContainer(candidate: MediaCandidate): String =
-    candidate.suggestedFileName.substringAfterLast('.', "video").uppercase(Locale.US)

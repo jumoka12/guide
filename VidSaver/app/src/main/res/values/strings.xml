@@ -12,7 +12,12 @@
     <string name="browser_home_title">Browse and save</string>
     <string name="browser_menu">More</string>
     <string name="browser_home_subtitle">Open a site, play a video, then tap the download button.</string>
-    <string name="browser_address_hint">Search or enter address</string>
+    <string name="browser_address_hint">Paste copied link or search term</string>
+    <string name="browser_premium">Premium</string>
+    <string name="browser_search">Go</string>
+    <string name="browser_show_found">Show found videos</string>
+    <string name="browser_no_video_yet">No video found on this page yet. Play one and try again.</string>
+    <string name="msg_premium_soon">Premium is coming in a later update.</string>
     <string name="browser_search_engine">Search engine</string>
     <string name="browser_back">Back</string>
     <string name="browser_forward">Forward</string>
@@ -46,8 +51,14 @@
     <string name="candidates_title">%1$d video(s) found</string>
     <string name="candidates_subtitle">Only media this page already loaded for playback is listed.</string>
     <string name="candidates_download">Save</string>
-    <string name="candidates_other_files">Other files on this page (%1$d)</string>
-    <string name="browser_download_count">Download (%1$d)</string>
+    <string name="candidates_download_as">Download as</string>
+    <string name="candidates_rename">Rename</string>
+    <string name="candidates_name_label">File name</string>
+    <string name="candidates_size_unknown">Size unknown</string>
+    <string name="candidates_unmute">Tap to unmute</string>
+    <string name="candidates_mute">Tap to mute</string>
+    <string name="dialog_ok">OK</string>
+    <string name="dialog_cancel">Cancel</string>
 
     <!-- Downloads -->
     <string name="downloads_section_active">In progress</string>

@@ -59,8 +59,10 @@ class BrowserScreenTest {
         composeRule.onNodeWithTag("engine_duckduckgo").assertIsDisplayed()
     }
 
+    /** On the start page the tab list lives in the menu; the counter appears on a page. */
     @Test
     fun tabsSheetOpensAndCanAddATab() {
+        composeRule.onNodeWithTag(BROWSER_MENU_TEST_TAG).performClick()
         composeRule.onNodeWithTag("open_tabs").performClick()
         composeRule.onNodeWithTag(TABS_SHEET_TEST_TAG).assertIsDisplayed()
         composeRule.onNodeWithTag("new_tab").performClick()

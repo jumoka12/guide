@@ -248,8 +248,15 @@ class BrowserViewModel @Inject constructor(
     // ------------------------------------------------------------------ actions
 
     fun onCandidatesClicked() {
+        if (_uiState.value.candidates.isEmpty()) {
+            emitMessage(R.string.browser_no_video_yet)
+            return
+        }
         _uiState.update { it.copy(showCandidatesSheet = true) }
     }
+
+    /** The crown on the home page. Phase 5 swaps this for the paywall. */
+    fun onPremiumClicked() = emitMessage(R.string.msg_premium_soon)
 
     fun onCandidatesSheetDismissed() {
         _uiState.update { it.copy(showCandidatesSheet = false) }

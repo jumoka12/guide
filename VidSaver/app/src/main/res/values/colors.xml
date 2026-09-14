@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Painted before the first Compose frame; matches the light theme ground. -->
-    <color name="window_background">#FFFFFF</color>
-    <color name="splash_background">#FFFFFF</color>
-    <color name="ic_launcher_background">#2457D6</color>
+    <!-- Painted before the first Compose frame; the app is dark in both modes. -->
+    <color name="window_background">#1A1A1C</color>
+    <color name="splash_background">#1A1A1C</color>
+    <color name="ic_launcher_background">#D9322B</color>
 </resources>
