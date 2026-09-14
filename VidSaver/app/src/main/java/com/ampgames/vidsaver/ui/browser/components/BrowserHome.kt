@@ -1,8 +1,9 @@
 package com.ampgames.vidsaver.ui.browser.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,7 +26,7 @@ import com.ampgames.vidsaver.domain.browser.SearchEngine
 
 const val BROWSER_HOME_TEST_TAG = "browser_home"
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun BrowserHome(
     shortcuts: List<String>,
@@ -71,8 +72,11 @@ fun BrowserHome(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp, bottom = 4.dp),
         )
-        Row(
+        // FlowRow, not Row: five chips do not fit across a phone, and longer
+        // translations make it worse. Wrapping keeps every engine reachable.
+        FlowRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
             modifier = Modifier.fillMaxWidth(),
         ) {
             SearchEngine.entries.forEach { engine ->
