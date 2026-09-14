@@ -1,0 +1,89 @@
+# VidSaver ad/tracker host blocklist — PLACEHOLDER
+#
+# Replace this file with your real list. Format is the standard hosts-file
+# syntax, so any public list (StevenBlack, AdAway, Peter Lowe, …) can be dropped
+# in unchanged:
+#
+#   0.0.0.0 tracker.example.com     <- IP + host
+#   tracker.example.com             <- bare host, also accepted
+#   # comment                       <- ignored
+#
+# Matching is by host and parent domain: blocking "ads.example.com" also blocks
+# "a.b.ads.example.com" but not "example.com". Entries are loaded into a HashSet
+# off the main thread at startup (see AdBlocker), so list size costs memory, not
+# per-request time — a 150k-line list is fine.
+#
+# Two safety rules are applied at request time, not here:
+#   1. A request to the same host as the page being viewed is never blocked.
+#   2. A page host on the user's allowlist disables blocking for that page.
+
+0.0.0.0 doubleclick.net
+0.0.0.0 googleadservices.com
+0.0.0.0 googlesyndication.com
+0.0.0.0 googletagservices.com
+0.0.0.0 google-analytics.com
+0.0.0.0 googletagmanager.com
+0.0.0.0 adservice.google.com
+0.0.0.0 pagead2.googlesyndication.com
+0.0.0.0 partner.googleadservices.com
+0.0.0.0 ads.yahoo.com
+0.0.0.0 analytics.yahoo.com
+0.0.0.0 adtech.yahooinc.com
+0.0.0.0 bat.bing.com
+0.0.0.0 ads.msn.com
+0.0.0.0 scorecardresearch.com
+0.0.0.0 quantserve.com
+0.0.0.0 quantcast.com
+0.0.0.0 outbrain.com
+0.0.0.0 taboola.com
+0.0.0.0 criteo.com
+0.0.0.0 criteo.net
+0.0.0.0 adnxs.com
+0.0.0.0 adsrvr.org
+0.0.0.0 rubiconproject.com
+0.0.0.0 pubmatic.com
+0.0.0.0 openx.net
+0.0.0.0 casalemedia.com
+0.0.0.0 sharethrough.com
+0.0.0.0 3lift.com
+0.0.0.0 smartadserver.com
+0.0.0.0 teads.tv
+0.0.0.0 indexww.com
+0.0.0.0 bidswitch.net
+0.0.0.0 mgid.com
+0.0.0.0 revcontent.com
+0.0.0.0 propellerads.com
+0.0.0.0 popads.net
+0.0.0.0 adcash.com
+0.0.0.0 exoclick.com
+0.0.0.0 juicyads.com
+0.0.0.0 trafficjunky.net
+0.0.0.0 zedo.com
+0.0.0.0 adform.net
+0.0.0.0 sitescout.com
+0.0.0.0 mathtag.com
+0.0.0.0 bluekai.com
+0.0.0.0 demdex.net
+0.0.0.0 everesttech.net
+0.0.0.0 omtrdc.net
+0.0.0.0 branch.io
+0.0.0.0 appsflyer.com
+0.0.0.0 adjust.com
+0.0.0.0 kochava.com
+0.0.0.0 mixpanel.com
+0.0.0.0 amplitude.com
+0.0.0.0 segment.io
+0.0.0.0 fullstory.com
+0.0.0.0 hotjar.com
+0.0.0.0 mouseflow.com
+0.0.0.0 crazyegg.com
+0.0.0.0 inspectlet.com
+0.0.0.0 luckyorange.com
+0.0.0.0 clarity.ms
+0.0.0.0 newrelic.com
+0.0.0.0 nr-data.net
+0.0.0.0 chartbeat.com
+0.0.0.0 parsely.com
+0.0.0.0 moatads.com
+0.0.0.0 adsafeprotected.com
+0.0.0.0 doubleverify.com

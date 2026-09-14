@@ -11,11 +11,53 @@
     <!-- Browser -->
     <string name="browser_home_title">Browse and save</string>
     <string name="browser_home_subtitle">Open a site, play a video, then tap the download button.</string>
-    <string name="browser_site_not_supported">This site is not supported.</string>
+    <string name="browser_address_hint">Search or enter address</string>
+    <string name="browser_search_engine">Search engine</string>
+    <string name="browser_back">Back</string>
+    <string name="browser_forward">Forward</string>
+    <string name="browser_reload">Reload</string>
+    <string name="browser_stop">Stop loading</string>
+    <string name="browser_home">Home</string>
+    <string name="browser_bookmark">Bookmark this page</string>
+    <string name="browser_desktop_mode">Desktop site</string>
+    <string name="browser_download_available">Download</string>
+
+    <!-- Ad blocking -->
+    <string name="adblock_on">Ad blocking on</string>
+    <string name="adblock_off">Ad blocking off</string>
+
+    <!-- Tabs -->
+    <string name="tabs_open">Tabs</string>
+    <string name="tabs_title">Tabs (%1$d)</string>
+    <string name="tabs_new">New</string>
+    <string name="tabs_close">Close tab</string>
+
+    <!-- Bookmarks and history -->
+    <string name="bookmarks_open">Bookmarks</string>
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_empty">No bookmarks yet.</string>
+    <string name="bookmarks_remove">Remove</string>
+    <string name="history_title">History</string>
+    <string name="history_empty">No history yet.</string>
+    <string name="history_clear">Clear</string>
+
+    <!-- Detected media -->
+    <string name="candidates_title">%1$d video(s) found</string>
+    <string name="candidates_subtitle">Only media this page already loaded for playback is listed.</string>
+    <string name="candidates_download">Save</string>
 
     <!-- Placeholders for features landing in later phases -->
     <string name="placeholder_downloads">Your active and finished downloads will appear here.</string>
     <string name="placeholder_gallery">Videos you save will appear here.</string>
+
+    <!-- Transient messages -->
+    <string name="msg_site_not_supported">This site isn\'t supported. VidSaver doesn\'t work with YouTube or other Google video services.</string>
+    <string name="msg_bookmark_added">Bookmark added</string>
+    <string name="msg_bookmark_removed">Bookmark removed</string>
+    <string name="msg_history_cleared">History cleared</string>
+    <string name="msg_ads_allowed_on">Ads allowed on %1$s</string>
+    <string name="msg_ads_blocked_on">Ads blocked on %1$s</string>
+    <string name="msg_download_coming_soon">Saving arrives in the next update: %1$s</string>
 
     <!-- Settings -->
     <string name="settings_privacy_policy">Privacy policy</string>

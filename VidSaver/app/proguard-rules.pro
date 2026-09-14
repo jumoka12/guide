@@ -25,12 +25,43 @@
 # --- Timber ------------------------------------------------------------------
 -dontwarn org.jetbrains.annotations.**
 
-# --- Phase 2+ placeholders ---------------------------------------------------
-# WebView JavaScript bridge (Phase 2): the @JavascriptInterface methods are
-# called by name from injected JS and must survive shrinking.
+# --- WebView JavaScript bridge (Phase 2) -------------------------------------
+# video_sniffer.js calls these by name; without this the bridge silently stops
+# working in release builds only.
 -keepclassmembers class * {
     @android.webkit.JavascriptInterface <methods>;
 }
+-keep class com.ampgames.vidsaver.data.browser.sniffer.VideoSnifferBridge { *; }
 
-# Room (Phase 3), Media3 (Phase 4), RevenueCat (Phase 5) and the AppLovin MAX
-# adapters (Phase 6) each add their rules here as they are integrated.
+# The DOM payload is deserialized from the bridge, so it needs serializers too.
+-keepclassmembers class com.ampgames.vidsaver.data.browser.sniffer.** {
+    *** Companion;
+}
+-keepclasseswithmembers class com.ampgames.vidsaver.data.browser.sniffer.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keep,includedescriptorclasses class com.ampgames.vidsaver.data.browser.sniffer.**$$serializer { *; }
+
+# --- OkHttp / Okio (Phase 2) -------------------------------------------------
+# OkHttp ships consumer rules; these silence the optional-dependency warnings.
+-dontwarn okhttp3.internal.platform.**
+-dontwarn org.conscrypt.**
+-dontwarn org.bouncycastle.**
+-dontwarn org.openjsse.**
+-dontwarn okio.**
+
+# --- Room (Phase 2) ----------------------------------------------------------
+# Room generates implementations that are looked up reflectively by name.
+-keep class * extends androidx.room.RoomDatabase { <init>(); }
+-keep @androidx.room.Entity class * { *; }
+-dontwarn androidx.room.paging.**
+
+# --- Media3 (Phase 2 remuxing, Phase 4 playback) ------------------------------
+-dontwarn androidx.media3.**
+-keep class androidx.media3.common.** { *; }
+
+# --- Coil --------------------------------------------------------------------
+-dontwarn coil.**
+
+# RevenueCat (Phase 5) and the AppLovin MAX adapters (Phase 6) add their rules
+# here as they are integrated.

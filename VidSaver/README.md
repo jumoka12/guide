@@ -4,8 +4,9 @@ An Android in-app browser that detects videos the page already delivers for
 playback, downloads them to the device, and plays them back in a built-in
 gallery.
 
-> **Phase status:** Phase 1 (skeleton) complete. Phases 2–7 are not implemented
-> yet. See [Roadmap](#roadmap).
+> **Phase status:** Phases 1–2 complete (skeleton, browser, video detection,
+> download strategies). Phases 3–7 are not implemented yet. See
+> [Roadmap](#roadmap).
 
 ## Stack
 
@@ -16,9 +17,9 @@ gallery.
 | Architecture | Single module, MVVM over `ui/` · `domain/` · `data/` layers |
 | DI | Hilt |
 | Async | Coroutines + Flow |
-| Persistence | Room, DataStore (Phase 2+) |
+| Persistence | Room, DataStore |
 | Background work | WorkManager + a foreground service (Phase 3) |
-| Media | Media3 / ExoPlayer (Phase 4) |
+| Media | Media3 Transformer (remux); ExoPlayer playback in Phase 4 |
 | Networking | OkHttp |
 | Images | Coil |
 | Logging | Timber |
@@ -82,29 +83,85 @@ Edit `assets/config/app_config.json` — no code change needed:
 Ad unit IDs ship as placeholders. Use the AppLovin/AdMob **test** unit IDs during
 development; never commit live unit IDs paired with real keys.
 
-### Adding a new `SiteExtractor` (Phase 2)
+### Adding a new `SiteExtractor`
 
 Extraction is a registry of small strategies. To support a new site:
 
-1. Implement `SiteExtractor`:
+1. **Write the extractor.** For a site that needs no bespoke parsing, subclass
+   `DelegatingSiteExtractor` and declare its domains:
    ```kotlin
-   class VimeoExtractor @Inject constructor() : SiteExtractor {
-       override fun matches(url: String) = url.host().endsWith("vimeo.com")
-       override suspend fun extract(
-           pageUrl: String,
-           html: String,
-           sniffed: List<SniffedMedia>,
-       ): List<MediaCandidate> = // parse, or delegate to the generic path
-   }
+   class VimeoExtractor @Inject constructor() :
+       DelegatingSiteExtractor("vimeo", listOf("vimeo.com", "player.vimeo.com"))
    ```
-2. Bind it into the registry set in the extractor Hilt module (`@IntoSet`).
-3. `ExtractorRegistry` picks the first extractor whose `matches` returns true and
-   falls back to `GenericExtractor`, which uses only what the WebView already
-   requested.
+   For real parsing, implement `SiteExtractor` directly and override `extract`.
+2. **Bind it** in `di/MediaModule.kt`:
+   ```kotlin
+   @Binds @IntoSet abstract fun bindVimeo(extractor: VimeoExtractor): SiteExtractor
+   ```
+3. That's it. `ExtractorRegistry` orders extractors itself: `YouTubeBlocker`
+   first (so no site extractor can ever claim a blocked domain), then site
+   extractors by name, then `GenericExtractor` as the catch-all. An extractor
+   that throws falls back to the generic path rather than leaving the user with
+   nothing, and every candidate is re-checked against the blocked-domain list on
+   the way out.
 
 An extractor must never work around a login wall, paywall, age gate or DRM. If a
 page did not deliver the media to the WebView for playback, there is nothing to
 extract.
+
+### How video detection works
+
+Three layers feed the candidate list:
+
+1. **Network interception** — `VidSaverWebViewClient.shouldInterceptRequest` sees
+   every subresource the page requests. `shouldInterceptRequest` gives the
+   *request*, never the response headers, so `MediaSniffer` records URLs that
+   already look like media immediately, and for ambiguous ones issues a one-byte
+   ranged GET on a background coroutine to read the real `Content-Type`. Probes
+   are capped per page and skip obvious static assets.
+2. **DOM scanning** — `assets/js/video_sniffer.js` is injected on page finish and
+   re-runs on DOM mutation. It reads `<video>`, `<source>` and `og:video`/
+   `twitter:player` tags and posts them over the `@JavascriptInterface` bridge.
+   It never calls a site API or touches storage.
+3. **Extraction** — `ExtractorRegistry` turns the observations into
+   `MediaCandidate`s: segments dropped, duplicates merged, sorted best-quality
+   first.
+
+`blob:` and `data:` URLs are deliberately ignored: they exist only inside the
+page and cannot be re-fetched.
+
+### Download strategies
+
+`DownloadStrategy` has two implementations, chosen by `DownloadStrategySelector`:
+
+- **`DirectFileDownloadStrategy`** — a single HTTP file, resuming with `Range`
+  when a partial file exists. If the server ignores the range and replies 200, it
+  restarts cleanly rather than appending to a corrupt file.
+- **`HlsDownloadStrategy`** — fetches the playlist (following a master playlist
+  to the variant matching the requested resolution, best quality by default),
+  downloads every segment, concatenates them, then remuxes to MP4 through
+  `Remuxer`. `Media3Remuxer` does a lossless container rewrite with
+  `Transformer`; if it fails, `PassthroughRemuxer` keeps the MPEG-TS stream so a
+  finished download is never thrown away.
+
+Two cases are refused outright rather than worked around:
+
+| Case | Behaviour |
+| --- | --- |
+| `EXT-X-KEY` with a real method | `DownloadError.Encrypted` — the key is never fetched, the stream is never decrypted |
+| No `EXT-X-ENDLIST` (live) | `DownloadError.LiveStream` |
+
+### Ad blocking
+
+`assets/hosts_blocklist.txt` is a **placeholder**; replace it with a real list.
+Standard hosts-file syntax, so any public list (StevenBlack, AdAway, Peter Lowe)
+drops in unchanged. It is parsed into a `HashSet` off the main thread at startup,
+and matching is by host and parent domain, so a 150k-line list costs memory, not
+per-request time.
+
+Two safety rules apply at request time: a request to the same host as the page is
+never blocked, and a page host on the user's allowlist disables blocking for that
+page (the shield button in the browser toolbar).
 
 ## Compliance
 
@@ -131,7 +188,8 @@ These constraints are requirements, not preferences:
 - [x] Scoped storage only; no legacy storage permission on API 29+
 - [x] Privacy policy and terms links reachable in-app from Settings
 - [x] Backup/data-extraction rules exclude all app data
-- [x] `usesCleartextTraffic="false"`
+- [x] `usesCleartextTraffic="false"`; WebView file/content access off, Safe Browsing on, third-party cookies off by default
+- [x] HLS encryption and live streams refused rather than circumvented
 - [ ] UMP consent gate before any ad SDK init *(Phase 6)*
 - [ ] Notification runtime permission requested in context *(Phase 3)*
 - [ ] Foreground service type `dataSync` with a user-visible download notification *(Phase 3)*
@@ -149,7 +207,7 @@ Privacy policy: <https://ampgames.com/privacy>
 | Phase | Scope | Status |
 | --- | --- | --- |
 | 1 | Skeleton: Gradle/version catalog, Hilt, Compose, 4-tab navigation, `AppConfig`, Timber, crash-safe Application | Done |
-| 2 | Browser: WebView, tabs, bookmarks, history, ad-blocker, video sniffing, extractor registry, HLS strategy | Not started |
+| 2 | Browser: WebView, tabs, bookmarks, history, ad-blocker, video sniffing, extractor registry, HLS strategy | Done |
 | 3 | Download engine: Room-backed repository, foreground service, resumable/concurrent downloads, MediaStore | Not started |
 | 4 | Gallery and Media3 player | Not started |
 | 5 | Subscriptions via RevenueCat and the paywall | Not started |
@@ -160,12 +218,21 @@ Privacy policy: <https://ampgames.com/privacy>
 
 ```
 app/src/main/
-├── assets/config/app_config.json     remote-shaped runtime config
+├── assets/
+│   ├── config/app_config.json        remote-shaped runtime config
+│   ├── hosts_blocklist.txt           ad/tracker hosts (PLACEHOLDER)
+│   └── js/video_sniffer.js           injected DOM media scanner
 ├── java/com/ampgames/vidsaver/
 │   ├── VidSaverApplication.kt        Hilt entry point, crash-safe startup
 │   ├── MainActivity.kt
-│   ├── core/logging/                 Timber trees
-│   ├── data/config/                  AppConfig model + loader
+│   ├── core/                         logging, URL helpers
+│   ├── domain/
+│   │   ├── browser/                  search engines, unsupported-domain policy
+│   │   └── media/                    media models, extractors, HLS parsing
+│   ├── data/
+│   │   ├── browser/                  Room DAOs, DataStore prefs, ad blocker, sniffer
+│   │   ├── config/                   AppConfig model + loader
+│   │   └── download/                 DownloadStrategy implementations
 │   ├── di/                           Hilt modules
 │   └── ui/                           theme, navigation, one package per tab
 └── res/
