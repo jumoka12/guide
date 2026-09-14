@@ -4,8 +4,6 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.view.WindowManager
-import androidx.activity.ComponentActivity
-import androidx.activity.PictureInPictureModeChangedInfo
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,17 +16,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.core.util.Consumer
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.MediaItem
@@ -71,15 +67,13 @@ fun PlayerScreen(
 
     // In Picture-in-Picture the window is a thumbnail: controls and gestures
     // over it are unusable and only obscure the video.
-    var inPictureInPicture by remember { mutableStateOf(false) }
-
-    DisposableEffect(activity) {
-        val componentActivity = activity as? ComponentActivity
-        val listener = Consumer<PictureInPictureModeChangedInfo> { info ->
-            inPictureInPicture = info.isInPictureInPictureMode
-        }
-        componentActivity?.addOnPictureInPictureModeChangedListener(listener)
-        onDispose { componentActivity?.removeOnPictureInPictureModeChangedListener(listener) }
+    //
+    // Entering or leaving PiP is a configuration change, and the Activity
+    // declares it in `configChanges`, so LocalConfiguration is the signal —
+    // no listener to register, and nothing beyond the platform API.
+    val configuration = LocalConfiguration.current
+    val inPictureInPicture = remember(configuration) {
+        activity?.isInPictureInPictureMode == true
     }
 
     // Load the playlist into the player, and keep it pointed at the right item.

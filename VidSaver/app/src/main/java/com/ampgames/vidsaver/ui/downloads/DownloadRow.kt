@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +40,7 @@ import com.ampgames.vidsaver.domain.download.DownloadStatus
  * snackbar the ViewModel posts, not a dialog, because a dialog on every swipe
  * makes bulk cleanup miserable.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DownloadRow(
     item: DownloadUiItem,

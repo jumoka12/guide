@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.outlined.Headphones
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -45,6 +46,7 @@ const val PLAYER_CONTROLS_TEST_TAG = "player_controls"
  * secondary actions at the bottom. Fades rather than popping, and sits above the
  * gesture layer so buttons win over drags.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlayerControls(
     state: PlayerUiState,
@@ -191,6 +193,7 @@ private fun TransportRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun BottomRow(
     state: PlayerUiState,
