@@ -1,0 +1,16 @@
+# Copy to `local.properties` (git-ignored) and fill in.
+# Every value is optional for a debug build: missing keys compile to empty
+# strings and the matching SDK stays disabled at runtime.
+
+# Android SDK location (Android Studio writes this for you).
+sdk.dir=/path/to/Android/sdk
+
+# Phase 5 - RevenueCat public SDK key (the "appl_..." / "goog_..." one, not a secret key).
+REVENUECAT_KEY=
+
+# Phase 6 - AppLovin MAX SDK key from the MAX dashboard.
+APPLOVIN_SDK_KEY=
+
+# Phase 7 - Singular, only needed when analytics.singular_enabled is true.
+SINGULAR_API_KEY=
+SINGULAR_SECRET=

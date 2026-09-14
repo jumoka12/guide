@@ -1,0 +1,52 @@
+{
+  "ads": {
+    "enabled": true,
+    "launch_route_mode": 2,
+    "postpone_launch_route_sessions": 0,
+    "interstitial_launch_ready_only": true,
+    "interstitial_capping_minutes": 40,
+    "happy_moment_mode": 1,
+    "happy_moment_capping": 2,
+    "mrec_refresh_after_impressions": 1,
+    "exit_dialog_mode": 1,
+    "post_bidding_enabled": true,
+    "max_units": {
+      "interstitial": "MAX_INTERSTITIAL_ID",
+      "mrec_banner": "MAX_MREC_ID",
+      "mrec_native": "MAX_NATIVE_ID",
+      "exit_native": "MAX_EXIT_NATIVE_ID",
+      "small_banner": "MAX_SMALL_BANNER_ID"
+    },
+    "gam_units": {
+      "interstitial": "/NETWORK_CODE/VidSaver_Interstitial",
+      "native": "/NETWORK_CODE/VidSaver_Native",
+      "exit_native": "/NETWORK_CODE/VidSaver_Exit_Native"
+    }
+  },
+  "iap": {
+    "provider": "revenuecat",
+    "entitlement": "premium",
+    "default_sku": "vs_monthly_7d_trial",
+    "offer_on_resume_every": 3,
+    "offer_new_installers_only": false,
+    "onboarding_paywall": true
+  },
+  "engagement": {
+    "rateus_mode": 1,
+    "rateus_session_start": 5
+  },
+  "browser": {
+    "blocked_domains": ["youtube.com", "youtu.be", "m.youtube.com", "music.youtube.com"],
+    "home_shortcuts": ["tiktok.com", "instagram.com", "x.com", "facebook.com", "pinterest.com", "vimeo.com", "dailymotion.com"],
+    "default_search_engine": "google"
+  },
+  "analytics": {
+    "providers": ["firebase"],
+    "singular_enabled": false
+  },
+  "links": {
+    "privacy_policy": "https://ampgames.com/privacy",
+    "terms": "https://ampgames.com/terms",
+    "support_email": "support@ampgames.com"
+  }
+}

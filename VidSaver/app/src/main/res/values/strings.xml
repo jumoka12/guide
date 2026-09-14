@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">VidSaver</string>
+
+    <!-- Bottom navigation -->
+    <string name="tab_browser">Browser</string>
+    <string name="tab_downloads">Downloads</string>
+    <string name="tab_gallery">Gallery</string>
+    <string name="tab_settings">Settings</string>
+
+    <!-- Browser -->
+    <string name="browser_home_title">Browse and save</string>
+    <string name="browser_home_subtitle">Open a site, play a video, then tap the download button.</string>
+    <string name="browser_site_not_supported">This site is not supported.</string>
+
+    <!-- Placeholders for features landing in later phases -->
+    <string name="placeholder_downloads">Your active and finished downloads will appear here.</string>
+    <string name="placeholder_gallery">Videos you save will appear here.</string>
+
+    <!-- Settings -->
+    <string name="settings_privacy_policy">Privacy policy</string>
+    <string name="settings_terms">Terms of use</string>
+    <string name="settings_support">Contact support</string>
+    <string name="settings_version">Version %1$s</string>
+</resources>

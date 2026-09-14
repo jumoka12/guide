@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Play button over a download arrow: the app mark. Vector-only so the repo
+     carries no binary image assets. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M44,34 L70,48 L44,62 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51,66 h6 v9 h7 l-10,11 l-10,-11 h7 z" />
+</vector>
