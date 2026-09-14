@@ -61,12 +61,14 @@ class MediaSniffer @Inject constructor(
     /** URLs already handled for the current page, so each is probed at most once. */
     private val seen = ConcurrentHashMap.newKeySet<String>()
     private val probeCount = AtomicInteger(0)
+    private val mediaProbeCount = AtomicInteger(0)
 
     /** Clears state for a new page. Called when navigation commits. */
     fun onNavigationStarted(url: String) {
         pageUrl = url
         seen.clear()
         probeCount.set(0)
+        mediaProbeCount.set(0)
         _media.value = emptyList()
     }
 
@@ -102,7 +104,7 @@ class MediaSniffer @Inject constructor(
             )
         }
 
-        if (shouldProbe(canonical)) {
+        if (shouldProbe(canonical, looksLikeMedia)) {
             scope.launch { probeContentType(canonical, headers, alreadyRecorded = looksLikeMedia) }
         }
     }
@@ -144,7 +146,7 @@ class MediaSniffer @Inject constructor(
         headers: Map<String, String>,
         alreadyRecorded: Boolean,
     ) {
-        probeCount.incrementAndGet()
+        (if (alreadyRecorded) mediaProbeCount else probeCount).incrementAndGet()
         withContext(ioDispatcher) {
             runCatching {
                 // One byte is enough to read the headers, and servers that reject
@@ -205,7 +207,11 @@ class MediaSniffer @Inject constructor(
      * by extension, and the count is capped so a page with hundreds of XHRs
      * cannot turn into hundreds of extra requests.
      */
-    private fun shouldProbe(url: String): Boolean {
+    private fun shouldProbe(url: String, looksLikeMedia: Boolean): Boolean {
+        // Files that already look like media have their own budget: a social
+        // page fires hundreds of API calls before its first video, and those
+        // must not spend the budget the video's size needs.
+        if (looksLikeMedia) return mediaProbeCount.get() < MAX_MEDIA_PROBES_PER_PAGE
         if (probeCount.get() >= MAX_PROBES_PER_PAGE) return false
         val extension = Urls.fileExtension(url)
         if (extension != null && extension in NON_MEDIA_EXTENSIONS) return false
@@ -234,6 +240,7 @@ class MediaSniffer @Inject constructor(
 
     private companion object {
         const val MAX_PROBES_PER_PAGE = 24
+        const val MAX_MEDIA_PROBES_PER_PAGE = 40
         const val MAX_TRACKED_MEDIA = 60
 
         val FORWARDED_HEADERS = setOf("referer", "user-agent", "origin", "cookie")

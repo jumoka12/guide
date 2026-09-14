@@ -81,6 +81,12 @@ data class MediaCandidate(
      * the network view of one clip is a dozen quality tiers and audio tracks.
      */
     val source: SniffSource = SniffSource.NETWORK,
+    /**
+     * Whether the file carries an audio track. Null when nobody knows, which is
+     * the usual case; false when a site extractor recognised a video-only
+     * stream, so the sheet can warn before someone saves a silent clip.
+     */
+    val hasAudio: Boolean? = null,
 ) {
     /** Stable identity for de-duplication and list keys. */
     val id: String get() = url

@@ -208,6 +208,15 @@ private fun QualityChip(
             maxLines = 1,
             modifier = Modifier.padding(top = 2.dp),
         )
+        if (candidate.hasAudio == false) {
+            Text(
+                text = stringResource(R.string.candidates_no_audio),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
     }
 }
 

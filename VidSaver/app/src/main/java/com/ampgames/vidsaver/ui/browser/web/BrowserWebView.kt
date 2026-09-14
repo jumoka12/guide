@@ -3,12 +3,14 @@ package com.ampgames.vidsaver.ui.browser.web
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.view.View
+import android.webkit.ConsoleMessage
 import android.webkit.WebChromeClient
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -44,6 +46,7 @@ fun BrowserWebView(
     onUserAgentResolved: (String) -> Unit,
     onPageHtmlCaptured: (String) -> Unit,
     modifier: Modifier = Modifier,
+    generation: Int = 0,
 ) {
     val holder = remember { WebViewHolder() }
     val fullscreen = remember { FullscreenHost() }
@@ -54,8 +57,9 @@ fun BrowserWebView(
         onDispose { fullscreen.hide() }
     }
 
-    // Capture page source once each load finishes, for the extractors.
-    LaunchedEffect(client) {
+    // Capture page source once each load finishes, for the extractors. Keyed
+    // on the generation too: releasing a dead WebView clears the hook.
+    LaunchedEffect(client, generation) {
         client.onPageLoaded = { webView ->
             webView.evaluateJavascript(HTML_CAPTURE_JS) { encoded ->
                 runCatching { Json.decodeFromString(String.serializer(), encoded) }
@@ -65,56 +69,73 @@ fun BrowserWebView(
         }
     }
 
-    AndroidView(
-        modifier = modifier.testTag(BROWSER_WEBVIEW_TEST_TAG),
-        factory = { context ->
-            WebView(context).apply {
-                WebViewConfig.apply(this)
-                holder.defaultUserAgent = settings.userAgentString
-                onUserAgentResolved(settings.userAgentString)
+    // A new generation discards the WebView and builds another: the only cure
+    // for a renderer that has died under it.
+    key(generation) {
+        AndroidView(
+            modifier = modifier.testTag(BROWSER_WEBVIEW_TEST_TAG),
+            factory = { context ->
+                WebView(context).apply {
+                    WebViewConfig.apply(this)
+                    // After apply(): the UA is the sanitised mobile one by then.
+                    holder.defaultUserAgent = settings.userAgentString
+                    onUserAgentResolved(settings.userAgentString)
 
-                webViewClient = client
-                webChromeClient = object : WebChromeClient() {
-                    override fun onProgressChanged(view: WebView, newProgress: Int) {
-                        onProgressChanged(newProgress)
-                        onNavigationStateChanged(view.canGoBack(), view.canGoForward())
-                    }
-
-                    override fun onReceivedTitle(view: WebView, title: String?) {
-                        onTitleChanged(title)
-                    }
-
-                    override fun onShowCustomView(view: View, callback: CustomViewCallback) {
-                        val activity = context.findActivity()
-                        if (activity == null) {
-                            callback.onCustomViewHidden()
-                            return
+                    webViewClient = client
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onProgressChanged(view: WebView, newProgress: Int) {
+                            onProgressChanged(newProgress)
+                            onNavigationStateChanged(view.canGoBack(), view.canGoForward())
                         }
-                        fullscreen.show(activity, view, callback)
-                    }
 
-                    override fun onHideCustomView() {
-                        fullscreen.hide()
+                        override fun onReceivedTitle(view: WebView, title: String?) {
+                            onTitleChanged(title)
+                        }
+
+                        /** Page console output, so a site that breaks in the WebView says why in Logcat. */
+                        override fun onConsoleMessage(message: ConsoleMessage): Boolean {
+                            Timber.tag("WebConsole").d(
+                                "%s: %s (%s:%d)",
+                                message.messageLevel(),
+                                message.message(),
+                                message.sourceId(),
+                                message.lineNumber(),
+                            )
+                            return true
+                        }
+
+                        override fun onShowCustomView(view: View, callback: CustomViewCallback) {
+                            val activity = context.findActivity()
+                            if (activity == null) {
+                                callback.onCustomViewHidden()
+                                return
+                            }
+                            fullscreen.show(activity, view, callback)
+                        }
+
+                        override fun onHideCustomView() {
+                            fullscreen.hide()
+                        }
                     }
+                    addJavascriptInterface(bridge, VideoSnifferBridge.INTERFACE_NAME)
+                    WebViewScripts.preload(context.applicationContext)
+                    holder.webView = this
                 }
-                addJavascriptInterface(bridge, VideoSnifferBridge.INTERFACE_NAME)
-                WebViewScripts.preload(context.applicationContext)
-                holder.webView = this
-            }
-        },
-        update = { webView ->
-            holder.webView = webView
-            WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
-        },
-        onRelease = { webView ->
-            fullscreen.hide()
-            client.onPageLoaded = null
-            webView.stopLoading()
-            webView.removeJavascriptInterface(VideoSnifferBridge.INTERFACE_NAME)
-            webView.destroy()
-            holder.webView = null
-        },
-    )
+            },
+            update = { webView ->
+                holder.webView = webView
+                WebViewConfig.setDesktopMode(webView, desktopMode, holder.defaultUserAgent)
+            },
+            onRelease = { webView ->
+                fullscreen.hide()
+                client.onPageLoaded = null
+                webView.stopLoading()
+                webView.removeJavascriptInterface(VideoSnifferBridge.INTERFACE_NAME)
+                webView.destroy()
+                if (holder.webView === webView) holder.webView = null
+            },
+        )
+    }
 
     LaunchedEffect(commands) {
         commands.collect { command ->

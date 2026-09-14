@@ -21,6 +21,17 @@ object WebViewConfig {
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) " +
             "Chrome/122.0.0.0 Safari/537.36"
 
+    /**
+     * The WebView's own User-Agent minus the `; wv` marker that flags it as an
+     * embedded view. Large sites serve a stripped-down or broken page to that
+     * marker — Facebook among them — while the same engine identified as
+     * mobile Chrome gets the page every phone browser gets.
+     */
+    fun mobileUserAgent(webView: WebView): String =
+        webView.settings.userAgentString
+            .replace("; wv", "")
+            .replace(Regex("""\s*Version/\d+(\.\d+)*"""), "")
+
     @SuppressLint("SetJavaScriptEnabled")
     fun apply(webView: WebView) {
         with(webView.settings) {
@@ -39,6 +50,7 @@ object WebViewConfig {
             displayZoomControls = false
             cacheMode = WebSettings.LOAD_DEFAULT
             mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            userAgentString = mobileUserAgent(webView)
 
             // Attack surface we have no use for.
             allowFileAccess = false
@@ -50,6 +62,17 @@ object WebViewConfig {
 
         if (WebViewFeature.isFeatureSupported(WebViewFeature.SAFE_BROWSING_ENABLE)) {
             WebSettingsCompat.setSafeBrowsingEnabled(webView.settings, true)
+        }
+
+        // The app theme is dark, and a dark host theme invites the WebView to
+        // recolour pages ("force dark"). Pages pick their own colours; a
+        // recoloured Facebook is a black page with black text.
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.ALGORITHMIC_DARKENING)) {
+            WebSettingsCompat.setAlgorithmicDarkeningAllowed(webView.settings, false)
+        }
+        if (WebViewFeature.isFeatureSupported(WebViewFeature.FORCE_DARK)) {
+            @Suppress("DEPRECATION")
+            WebSettingsCompat.setForceDark(webView.settings, WebSettingsCompat.FORCE_DARK_OFF)
         }
 
         CookieManager.getInstance().apply {
@@ -65,9 +88,14 @@ object WebViewConfig {
 
     /** Switches between the WebView's own mobile UA and a desktop UA. */
     fun setDesktopMode(webView: WebView, desktop: Boolean, defaultUserAgent: String) {
-        webView.settings.userAgentString = if (desktop) DESKTOP_USER_AGENT else defaultUserAgent
-        webView.settings.useWideViewPort = desktop
-        webView.settings.loadWithOverviewMode = desktop
+        val target = if (desktop) DESKTOP_USER_AGENT else defaultUserAgent
+        // Only touch the setting when it changes: this runs on every
+        // recomposition, and rewriting the UA is not free.
+        if (webView.settings.userAgentString != target) {
+            webView.settings.userAgentString = target
+            webView.settings.useWideViewPort = desktop
+            webView.settings.loadWithOverviewMode = desktop
+        }
     }
 
     fun setThirdPartyCookiesAllowed(webView: WebView, allowed: Boolean) {

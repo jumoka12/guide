@@ -415,8 +415,40 @@ class BrowserViewModel @Inject constructor(
             override fun isAdBlockEnabled(): Boolean = _uiState.value.adBlockEnabled
 
             override fun currentPageUrl(): String = _uiState.value.currentUrl
+
+            override fun onUrlChanged(url: String) = this@BrowserViewModel.onUrlChanged(url)
+
+            override fun onRendererGone() = this@BrowserViewModel.onRendererGone()
         },
     )
+
+    /** A `pushState` move: same document, new post. Media from the old one is stale. */
+    fun onUrlChanged(url: String) {
+        currentPageHtml = ""
+        _uiState.update { state ->
+            state.copy(
+                currentUrl = url,
+                addressText = if (state.isAddressFocused) state.addressText else url,
+                candidates = emptyList(),
+                siteAllowlisted = Urls.host(url)?.let { adBlocker.isAllowlisted(it) } ?: false,
+                tabs = state.tabs.map {
+                    if (it.id == state.currentTabId) it.copy(url = url) else it
+                },
+            )
+        }
+        refreshBookmarkState(url)
+    }
+
+    /**
+     * The renderer crashed. A dead WebView paints black forever, so the view
+     * layer rebuilds it (keyed on [BrowserUiState.webViewGeneration]) and the
+     * page is loaded again into the new one.
+     */
+    fun onRendererGone() {
+        val url = _uiState.value.currentUrl
+        _uiState.update { it.copy(webViewGeneration = it.webViewGeneration + 1, candidates = emptyList()) }
+        if (url.isNotBlank()) send(BrowserCommand.LoadUrl(url))
+    }
 
     fun createSnifferBridge(): VideoSnifferBridge =
         VideoSnifferBridge { payload -> onDomMediaFound(payload) }

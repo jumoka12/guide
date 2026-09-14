@@ -118,6 +118,7 @@ fun BrowserScreen(
                 onNavigationStateChanged = viewModel::onNavigationStateChanged,
                 onUserAgentResolved = viewModel::onUserAgentResolved,
                 onPageHtmlCaptured = viewModel::onPageHtmlCaptured,
+                generation = state.webViewGeneration,
                 modifier = Modifier.fillMaxSize(),
             )
 

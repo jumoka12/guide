@@ -38,6 +38,8 @@ data class BrowserUiState(
     val showCandidatesSheet: Boolean = false,
     val showTabsSheet: Boolean = false,
     val showBookmarksSheet: Boolean = false,
+    /** Bumped to rebuild the WebView after its renderer dies. */
+    val webViewGeneration: Int = 0,
 ) {
     val currentTab: BrowserTab?
         get() = tabs.firstOrNull { it.id == currentTabId }

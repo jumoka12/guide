@@ -1,6 +1,8 @@
 package com.ampgames.vidsaver.ui.browser.web
 
 import android.graphics.Bitmap
+import android.webkit.RenderProcessGoneDetail
+import android.webkit.WebResourceError
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
 import android.webkit.WebView
@@ -9,6 +11,7 @@ import com.ampgames.vidsaver.data.browser.adblock.AdBlocker
 import com.ampgames.vidsaver.data.browser.sniffer.MediaSniffer
 import com.ampgames.vidsaver.domain.browser.UnsupportedDomains
 import java.io.ByteArrayInputStream
+import timber.log.Timber
 
 /**
  * Wires ad blocking, media sniffing and the unsupported-domain block into the
@@ -39,6 +42,12 @@ class VidSaverWebViewClient(
         fun onUnsupportedDomainBlocked(url: String)
         fun isAdBlockEnabled(): Boolean
         fun currentPageUrl(): String
+
+        /** An in-page (`pushState`) move to a new URL, with no page load. */
+        fun onUrlChanged(url: String)
+
+        /** The renderer died; the WebView must be rebuilt before it draws again. */
+        fun onRendererGone()
     }
 
     override fun shouldOverrideUrlLoading(
@@ -92,6 +101,56 @@ class VidSaverWebViewClient(
         callbacks.onPageFinished(url, view.title)
         callbacks.onProgressRelevantStateChanged(view.canGoBack(), view.canGoForward())
         onPageLoaded?.invoke(view)
+    }
+
+    /**
+     * Single-page sites (Facebook, Instagram, X) move between posts with
+     * `pushState`, which never triggers [onPageStarted]. This is the one hook
+     * that fires for those moves, so it is where the app learns the URL changed
+     * and drops the previous post's media.
+     */
+    override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
+        super.doUpdateVisitedHistory(view, url, isReload)
+        if (isReload) return
+        val current = callbacks.currentPageUrl()
+        if (url.substringBefore('#') == current.substringBefore('#')) return
+        mediaSniffer.onNavigationStarted(url)
+        callbacks.onUrlChanged(url)
+        WebViewScripts.injectSniffer(view)
+        callbacks.onProgressRelevantStateChanged(view.canGoBack(), view.canGoForward())
+    }
+
+    override fun onReceivedError(
+        view: WebView,
+        request: WebResourceRequest,
+        error: WebResourceError,
+    ) {
+        super.onReceivedError(view, request, error)
+        if (request.isForMainFrame) {
+            Timber.w("Main frame failed: %s (%d %s)", request.url, error.errorCode, error.description)
+        }
+    }
+
+    override fun onReceivedHttpError(
+        view: WebView,
+        request: WebResourceRequest,
+        errorResponse: WebResourceResponse,
+    ) {
+        super.onReceivedHttpError(view, request, errorResponse)
+        if (request.isForMainFrame) {
+            Timber.w("Main frame HTTP %d for %s", errorResponse.statusCode, request.url)
+        }
+    }
+
+    /**
+     * A crashed renderer leaves the WebView painted black. Reporting it is
+     * the only way to tell that apart from a page that is merely dark; the
+     * view layer reloads the page when this returns true.
+     */
+    override fun onRenderProcessGone(view: WebView, detail: RenderProcessGoneDetail): Boolean {
+        Timber.e("WebView renderer gone (crash=%b) on %s", detail.didCrash(), callbacks.currentPageUrl())
+        callbacks.onRendererGone()
+        return true
     }
 
     private companion object {
